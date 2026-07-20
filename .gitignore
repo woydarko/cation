@@ -1,0 +1,9 @@
+/target
+**/*.rs.bk
+node_modules
+.env
+.env.local
+.DS_Store
+.soroban
+*.wasm
+!docs/**/*.wasm

@@ -1,0 +1,17 @@
+[package]
+name = "prize-pool"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+# cdylib is added at wasm-build time via `cargo rustc --crate-type cdylib`
+# (see docs/BUILD.md). Kept off here so native `cargo test` does not link a
+# Windows DLL, which trips a mingw "export ordinal too large" linker bug.
+[lib]
+crate-type = ["rlib"]
+
+[dependencies]
+soroban-sdk = { workspace = true }
+
+[dev-dependencies]
+soroban-sdk = { workspace = true, features = ["testutils"] }
