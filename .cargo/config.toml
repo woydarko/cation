@@ -1,0 +1,12 @@
+# Use LLVM lld (shipped with the Rust toolchain) as the linker for native
+# builds on the Windows GNU target. The default mingw `ld` overflows its DLL
+# export-ordinal table when linking Soroban contract cdylibs for host tests
+# (error: "export ordinal too large"). lld has no such limit.
+#
+# -fuse-ld=lld tells the gcc driver to use lld; -B adds the toolchain's gcc-ld
+# directory so the driver can find ld.lld.exe there.
+[target.x86_64-pc-windows-gnu]
+rustflags = [
+  "-C", "link-arg=-fuse-ld=lld",
+  "-C", "link-arg=-BC:/Users/nabil/.rustup/toolchains/stable-x86_64-pc-windows-gnu/lib/rustlib/x86_64-pc-windows-gnu/bin/gcc-ld",
+]
