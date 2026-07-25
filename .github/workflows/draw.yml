@@ -1,0 +1,24 @@
+name: cation-draw
+
+# Runs the Cation draw keeper on a schedule. The keeper no-ops until the on-chain
+# draw window is open, so running every few hours is safe for a daily interval.
+on:
+  schedule:
+    - cron: "0 0 * * *" # daily at 00:00 UTC
+  workflow_dispatch: {} # allow manual runs
+
+jobs:
+  draw:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install keeper deps
+        run: cd keeper && npm install
+      - name: Run draw
+        run: cd keeper && npm run draw
+        env:
+          POOL_ID: ${{ secrets.POOL_ID }}
+          KEEPER_SECRET: ${{ secrets.KEEPER_SECRET }}
