@@ -1,0 +1,14 @@
+{
+  "name": "cation-keeper",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Weekly draw keeper: commit then reveal for a Cation PrizePool.",
+  "scripts": {
+    "draw": "node draw.mjs"
+  },
+  "dependencies": {
+    "@stellar/stellar-sdk": "^16.2.0",
+    "prize-pool-client": "file:../web/packages/prize-pool-client"
+  }
+}
