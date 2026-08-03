@@ -1,0 +1,140 @@
+@import "tailwindcss";
+
+/* Cation design tokens - PRD §6.1. Bright, playful, trustworthy. */
+:root {
+  --cloud: #f5f6ff; /* background */
+  --ink: #141234; /* text, deep indigo */
+  --volt: #6c4cf1; /* primary brand violet */
+  --zap: #c7f94b; /* win / highlight accent */
+  --coral: #ff7a5c; /* energy accent, sparing */
+  --mint: #2fd9a8; /* no-loss / safety cue */
+  --ink-60: color-mix(in srgb, var(--ink) 60%, transparent);
+  --ink-12: color-mix(in srgb, var(--ink) 12%, transparent);
+  --volt-12: color-mix(in srgb, var(--volt) 12%, transparent);
+}
+
+@theme inline {
+  --color-cloud: var(--cloud);
+  --color-ink: var(--ink);
+  --color-ink-60: var(--ink-60);
+  --color-ink-12: var(--ink-12);
+  --color-volt: var(--volt);
+  --color-volt-12: var(--volt-12);
+  --color-zap: var(--zap);
+  --color-coral: var(--coral);
+  --color-mint: var(--mint);
+
+  --font-display: "Clash Display", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "General Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-data: "Space Mono", ui-monospace, monospace;
+
+  --radius-card: 1.75rem;
+  --shadow-lift: 0 10px 30px -12px color-mix(in srgb, var(--ink) 28%, transparent);
+}
+
+html,
+body {
+  overflow-x: hidden; /* no horizontal scroll (#1, #16) */
+  max-width: 100%;
+}
+
+body {
+  background: var(--cloud);
+  color: var(--ink);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Chunky rounded card, thick friendly border, soft shadow, lift on hover. */
+.card {
+  background:
+    radial-gradient(120% 120% at 100% 0%, color-mix(in srgb, var(--volt) 8%, transparent) 0%, transparent 45%),
+    radial-gradient(120% 120% at 0% 100%, color-mix(in srgb, var(--coral) 5%, transparent) 0%, transparent 42%),
+    #fff;
+  border: 2px solid var(--ink-12);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-lift);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+.card-hover:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 18px 40px -14px color-mix(in srgb, var(--ink) 34%, transparent);
+}
+
+.btn {
+  font-family: var(--font-body);
+  font-weight: 600;
+  border-radius: 999px;
+  transition: transform 0.12s ease, filter 0.12s ease;
+}
+.btn:active {
+  transform: scale(0.97);
+}
+.btn-primary {
+  background: var(--volt);
+  color: #fff;
+}
+.btn-primary:hover {
+  filter: brightness(1.08);
+}
+
+.tabular {
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+}
+
+/* CTA band: violet gradient + soft brand glows + dot texture for depth. */
+.cta-band {
+  background:
+    linear-gradient(135deg, #8163ff 0%, #6c4cf1 45%, #4a2fd0 100%);
+  box-shadow: var(--shadow-lift);
+}
+.cta-dots {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.14) 1.5px, transparent 1.5px);
+  background-size: 22px 22px;
+  mask-image: radial-gradient(circle at 50% 40%, #000 30%, transparent 75%);
+  -webkit-mask-image: radial-gradient(circle at 50% 40%, #000 30%, transparent 75%);
+  pointer-events: none;
+}
+.cta-glow {
+  position: absolute;
+  width: 460px;
+  height: 460px;
+  border-radius: 999px;
+  filter: blur(80px);
+  opacity: 0.55;
+  pointer-events: none;
+}
+.cta-glow-zap {
+  top: -180px;
+  left: -120px;
+  background: var(--zap);
+  animation: cta-float 9s ease-in-out infinite;
+}
+.cta-glow-coral {
+  bottom: -200px;
+  right: -120px;
+  background: var(--coral);
+  animation: cta-float 11s ease-in-out infinite reverse;
+}
+@keyframes cta-float {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(30px, 20px) scale(1.12); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cta-glow-zap, .cta-glow-coral { animation: none; }
+}
+
+@keyframes spark {
+  0%, 100% { transform: scale(1) rotate(0deg); opacity: 0.9; }
+  50% { transform: scale(1.25) rotate(12deg); opacity: 1; }
+}
+.spark {
+  animation: spark 2.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spark, .card-hover { animation: none; transition: none; }
+}
