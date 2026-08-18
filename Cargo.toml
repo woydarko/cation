@@ -3,7 +3,7 @@ resolver = "2"
 members = ["contracts/prize-pool"]
 
 [workspace.dependencies]
-soroban-sdk = "22"
+soroban-sdk = "=25.3.2"
 
 [profile.release]
 opt-level = "z"

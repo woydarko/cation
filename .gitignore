@@ -7,3 +7,5 @@ node_modules
 .soroban
 *.wasm
 !docs/**/*.wasm
+!contracts/prize-pool/wasm/*.wasm
+test_snapshots/

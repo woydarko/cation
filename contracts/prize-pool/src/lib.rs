@@ -17,6 +17,14 @@ mod types;
 #[cfg(test)]
 mod test;
 
+/// Generated client + types for the Blend pool, from its on-chain wasm spec.
+/// Used by `blend.rs` in the real (non-test) path. Importing here keeps the
+/// generated code in this rlib crate (no cdylib, so no Windows DLL export-cap).
+#[allow(clippy::too_many_arguments)]
+mod blend_pool {
+    soroban_sdk::contractimport!(file = "wasm/blend_pool.wasm");
+}
+
 use soroban_sdk::{
     contract, contractimpl, panic_with_error, token, vec, Address, Bytes, BytesN, Env, Vec,
 };
@@ -85,7 +93,7 @@ impl PrizePool {
         // Pull USDC from the user into this contract, then supply to Blend.
         let this = env.current_contract_address();
         token::Client::new(&env, &cfg.usdc_sac).transfer_from(&this, &from, &this, &amount);
-        blend::supply(&env, &cfg.blend_pool, amount);
+        blend::supply(&env, &cfg.blend_pool, &cfg.usdc_sac, &this, amount);
 
         // Merge into any existing position with a weighted-average start.
         let key = DataKey::Deposit(from.clone());
@@ -161,8 +169,8 @@ impl PrizePool {
         env.storage().instance().set(&DataKey::TotalPrincipal, &total);
 
         // Redeem only the user's payout; the penalty stays supplied as yield.
-        blend::redeem(&env, &cfg.blend_pool, payout);
         let this = env.current_contract_address();
+        blend::redeem(&env, &cfg.blend_pool, &cfg.usdc_sac, &this, payout);
         token::Client::new(&env, &cfg.usdc_sac).transfer(&this, &to, &payout);
 
         if penalty > 0 {
@@ -188,7 +196,7 @@ impl PrizePool {
     pub fn pot(env: Env) -> i128 {
         let cfg = Self::config(&env);
         let this = env.current_contract_address();
-        let value = blend::value(&env, &cfg.usdc_sac, &this);
+        let value = blend::value(&env, &cfg.blend_pool, &cfg.usdc_sac, &this);
         value - Self::total_principal(&env)
     }
 
@@ -216,6 +224,17 @@ impl PrizePool {
             }
         }
         sum
+    }
+
+    /// Full config (admin, tokens, draw schedule, penalty, epoch). Read by the
+    /// UI to render the countdown, current epoch, and penalty rate.
+    pub fn get_config(env: Env) -> Config {
+        Self::config(&env)
+    }
+
+    /// Total principal pooled across all savers.
+    pub fn total_principal_view(env: Env) -> i128 {
+        Self::total_principal(&env)
     }
 
     // ---- draw: commit-reveal --------------------------------------------
@@ -254,7 +273,7 @@ impl PrizePool {
         let prize = Self::pot(env.clone());
         if prize > 0 {
             let this = env.current_contract_address();
-            blend::redeem(&env, &cfg.blend_pool, prize);
+            blend::redeem(&env, &cfg.blend_pool, &cfg.usdc_sac, &this, prize);
             token::Client::new(&env, &cfg.usdc_sac).transfer(&this, &winner, &prize);
         }
 
