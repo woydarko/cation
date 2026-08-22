@@ -156,8 +156,8 @@ async function submitClassic(signedXdr: string): Promise<void> {
   throw new Error("transaction timed out");
 }
 
-/** Onboarding faucet: fund the account if new, establish a USDC trustline
- * (user signs), then mint test USDC from the issuer. */
+/** Onboarding helper: ensure account exists and has Circle USDC trustline.
+ * Users then claim USDC themselves at https://faucet.circle.com/ . */
 export async function getTestUsdc(address: string): Promise<void> {
   const server = new rpc.Server(RPC_URL);
   try {
@@ -167,7 +167,7 @@ export async function getTestUsdc(address: string): Promise<void> {
     await new Promise((r) => setTimeout(r, 3000));
   }
 
-  // Establish (or top up) the USDC trustline. The user signs this classic op.
+  // Establish USDC trustline for Circle asset so faucet.circle.com can pay.
   const acct = await server.getAccount(address);
   const tx = new TransactionBuilder(acct, {
     fee: BASE_FEE,
@@ -181,14 +181,6 @@ export async function getTestUsdc(address: string): Promise<void> {
     address,
   });
   await submitClassic(signedTxXdr);
-
-  // Issuer mints test USDC to the now-trusting account (server side).
-  const r = await fetch("/api/faucet", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ address }),
-  });
-  if (!r.ok) throw new Error("faucet mint failed");
 }
 
 /** Deposit: approve the pool to pull USDC, then deposit. Both signed by the

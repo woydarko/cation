@@ -225,13 +225,15 @@ config/                   Environment config
 The contract is live on Stellar testnet:
 
 - **PrizePool:** `CC5JEG6QSEETBZKPSUIWEGSPOT63Z7QVBVP4CXGH2MXB5O5CBV323IZ6`
-- **USDC:** `CASWO3VWUS5LQNESTAOL2FJPPPCEV6BT27UVBED2JUYNSRV5QNEB2KKI`
+- **USDC:** `CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA` (Circle `USDC:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5`)
 - **Blend pool:** `CAYFESJVBO2OLTRYGYDS46MLDKONFYCRSE4HEJ3D75LCIDHF63RA22LY`
 - **Draw interval:** 120,960 ledgers (~7 days)
 - **Early exit penalty:** 500 bps (5%)
 
 Config lives in `config/testnet.env`. Deploy scripts are in
 `scripts/deploy-testnet.sh`.
+
+Claim test USDC at https://faucet.circle.com/ , then add trustline `USDC:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5`.
 
 You can verify the contract on
 [Stellar Expert](https://stellar.expert/explorer/testnet/contract/CC5JEG6QSEETBZKPSUIWEGSPOT63Z7QVBVP4CXGH2MXB5O5CBV323IZ6).

@@ -9,8 +9,8 @@ export const FRIENDBOT_URL = "https://friendbot.stellar.org";
 export const PRIZE_POOL_ID =
   "CBYVO73FY7TEWETJ7KCCVXREJOXFPEJEKIXCHUGHJFUCN4OJSGSZ66EH";
 
-// Our controllable Blend stack, so USDC is mintable for onboarding.
-export const USDC_SAC = "CASWO3VWUS5LQNESTAOL2FJPPPCEV6BT27UVBED2JUYNSRV5QNEB2KKI";
+// Circle official USDC on testnet. Claim via https://faucet.circle.com/
+export const USDC_SAC = "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA";
 export const BLEND_POOL = "CAYFESJVBO2OLTRYGYDS46MLDKONFYCRSE4HEJ3D75LCIDHF63RA22LY";
 
 export const USDC_CODE = "USDC";

@@ -1,32 +1,26 @@
 # Testnet deployment & validation
 
-## Why we run our own Blend stack
-The official Blend testnet USDC (`CAQCF…`) is a classic-asset SAC whose issuer
-we do not control, so we cannot mint it for users. Cation needs to hand test
-USDC to onboarding users (PRD §4.1 faucet, §11), so we deployed our own Blend
-stack with `blend-utils`, where **USDC is issued by our admin key
-(`cation-admin`)** and is freely mintable.
+## USDC
 
-## Live addresses (our stack)
+Cation uses Circle official testnet USDC (`USDC:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5`, SAC `CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA`). Users claim it themselves at https://faucet.circle.com/ . There is no internal mint.
+
+## Live addresses
 | Thing | Address |
 |-------|---------|
 | PrizePool (active) | `CC5JEG6QSEETBZKPSUIWEGSPOT63Z7QVBVP4CXGH2MXB5O5CBV323IZ6` |
-| USDC (mintable, issuer = cation-admin) | `CASWO3VWUS5LQNESTAOL2FJPPPCEV6BT27UVBED2JUYNSRV5QNEB2KKI` |
+| USDC (Circle, testnet) | `CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA` |
 | Blend pool | `CAYFESJVBO2OLTRYGYDS46MLDKONFYCRSE4HEJ3D75LCIDHF63RA22LY` |
-| Admin / keeper / issuer key | alias `cation-admin` |
+| Admin / keeper key | alias `cation-admin` |
 
 USDC has 7 decimals; reserve index 3 in the pool. bRate > 1 (yield accrues).
 
-## Faucet: mint test USDC to a user
-A user account first needs an XLM balance and a USDC trustline, then admin mints:
-```bash
-ISSUER=$(stellar keys address cation-admin)
-stellar keys generate <user> --network testnet --fund
-stellar tx new change-trust --source <user> --network testnet --line "USDC:$ISSUER"
-stellar contract invoke --id $USDC_SAC --network testnet --source cation-admin \
-  -- mint --to $(stellar keys address <user>) --amount 1000000000   # 100 USDC
-```
-(This is the flow the in-app faucet helper automates for the 10-user push.)
+## Faucet: get test USDC
+
+1. Create and fund a testnet account: `stellar keys generate <user> --network testnet --fund`
+2. Add trustline: `stellar tx new change-trust --source <user> --network testnet --line "USDC:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5"`
+3. Claim at https://faucet.circle.com/ (connect wallet, select testnet). The app's `Get test USDC` button links there.
+
+No admin mint is needed.
 
 ## Deposit flow (what the frontend will call)
 ```bash
