@@ -6,16 +6,20 @@ import Countdown from "@/components/Countdown";
 import WinRevealModal from "@/components/WinRevealModal";
 import Skeleton from "@/components/Skeleton";
 import { useWallet } from "@/components/WalletProvider";
+import { useToast } from "@/components/Toast";
 import { formatUsdc, secondsToNextUtcMidnight, oddsPct } from "@/lib/format";
 import type { PoolState } from "@/lib/server/contract";
 
 type Draw = { winner: string; amount: string; epoch: number };
 
 export default function Dashboard() {
-  const { address, connect, connecting } = useWallet();
+  const { address, connect, connecting, getTestUsdc } = useWallet();
+  const toast = useToast();
   const [state, setState] = useState<PoolState | null>(null);
   const [draws, setDraws] = useState<Draw[]>([]);
   const [win, setWin] = useState<{ amount: string; epoch: number } | null>(null);
+  const [fauceting, setFauceting] = useState(false);
+  const [circleUsdc, setCircleUsdc] = useState<string | null>(null);
 
   const checkDraws = useCallback(async () => {
     const r = await fetch("/api/history", { cache: "no-store" });
@@ -35,6 +39,17 @@ export default function Dashboard() {
     const r = await fetch(`/api/state?user=${address}`, { cache: "no-store" });
     if (r.ok) setState(await r.json());
     checkDraws();
+    // also check Circle USDC (GBBD...) via Horizon so we can warn if user holds the wrong asset
+    fetch(`https://horizon-testnet.stellar.org/accounts/${address}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((json) => {
+        const bal = json?.balances?.find(
+          (b: { asset_code: string; asset_issuer: string }) =>
+            b.asset_code === "USDC" && b.asset_issuer === "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5"
+        );
+        setCircleUsdc(bal ? String(Math.round(Number(bal.balance) * 1e7)) : null);
+      })
+      .catch(() => setCircleUsdc(null));
   }, [address, checkDraws]);
 
   useEffect(() => {
@@ -44,8 +59,18 @@ export default function Dashboard() {
     return () => clearInterval(id);
   }, [address, refresh]);
 
-  const claim = () => {
-    window.open("https://faucet.circle.com/", "_blank", "noopener,noreferrer");
+  const claim = async () => {
+    setFauceting(true);
+    try {
+      await getTestUsdc();
+      toast("success", "Cation test USDC is in your wallet.");
+      refresh();
+    } catch (e) {
+      toast("error", "Could not get test USDC. Try again.");
+      console.error(e);
+    } finally {
+      setFauceting(false);
+    }
   };
 
   // Gate: the dashboard requires a connected wallet.
@@ -116,6 +141,24 @@ export default function Dashboard() {
           <StatTile label="Your odds" value={hasDeposit ? `${odds}%` : "0%"} accent loading={!state} />
           <StatTile label="Times won" value={String(wins)} loading={!state} />
         </div>
+        {circleUsdc && BigInt(usdc) === 0n && BigInt(circleUsdc) > 0n && (
+          <div className="lg:col-span-3 rounded-2xl border-2 border-coral/30 bg-coral/10 px-4 py-3 text-sm">
+            <span className="font-semibold text-coral">Heads up:</span>{" "}
+            <span className="text-ink-60">
+              you hold ${formatUsdc(circleUsdc)} Circle USDC (GBBD...) but Cation on
+              testnet uses its own mintable USDC (CASWO... / GBDR...). Your Circle
+              balance does not count for deposits. Use{" "}
+              <button onClick={claim} className="underline font-semibold text-coral hover:text-ink">
+                Get test USDC
+              </button>{" "}
+              to mint the correct one, or get Circle USDC at{" "}
+              <a href="https://faucet.circle.com/" target="_blank" rel="noopener noreferrer" className="underline font-semibold">
+                faucet.circle.com
+              </a>{" "}
+              if you want it for other tests.
+            </span>
+          </div>
+        )}
 
         {/* Actions */}
         <div className="card p-5 lg:col-span-3 flex flex-col sm:flex-row gap-3">
@@ -132,10 +175,19 @@ export default function Dashboard() {
           </Link>
           <button
             onClick={claim}
-            className="btn py-3.5 text-base flex-1 border-2 border-ink-12 text-ink-60"
+            disabled={fauceting}
+            className="btn py-3.5 text-base flex-1 border-2 border-ink-12 text-ink-60 disabled:opacity-50"
           >
-            Get test USDC
+            {fauceting ? "Getting test USDC…" : "Get test USDC"}
           </button>
+          <a
+            href="https://faucet.circle.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hidden sm:inline-flex btn py-3.5 text-base border-2 border-ink-12 text-ink items-center justify-center"
+          >
+            Circle faucet
+          </a>
         </div>
 
         {/* Recent draws */}
