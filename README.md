@@ -2,84 +2,259 @@
 
 **Save money, win the interest, never lose a cent.**
 
-Cation is a no-loss prize-linked savings dApp on Stellar. Everyone's USDC is
-pooled and supplied to [Blend](https://www.blend.capital/) for yield. Once a
-week that yield goes to one winner via a provably fair draw. Non-winners keep
-every cent of principal and can withdraw anytime — unless they chose to lock.
+Cation is a no-loss prize-linked savings dApp built on Stellar. Everyone's
+USDC is pooled together and supplied to [Blend](https://www.blend.capital/)
+to earn yield. Once a week, all that accrued yield goes to one winner through
+a provably fair draw. If you don't win, your money is still there in full,
+and you can pull it out whenever you want.
 
-Full spec: [cation-prd.md](cation-prd.md). This is the **Level 4 (Green Belt)
-MVP**: testnet only, single pool, weekly draw, 10 real users.
+Think of it like a savings account where the bank's interest rate becomes a
+weekly lottery. But unlike a lottery, nobody ever loses their deposit.
 
-## Differentiator
-On-chain **commitment lock**: a saver can lock a deposit for 3–90 days,
-enforced by their smart account, not by app rules. Early exit is allowed for a
-penalty, and the penalty flows into the prize pot.
+## How it works
 
-## Repo layout
+The whole system follows a simple loop:
+
+1. **You deposit USDC.** Your tokens are pulled into the PrizePool contract
+   and immediately supplied to a Blend lending pool. Blend is a decentralized
+   lending protocol on Stellar. Your USDC starts earning interest right away.
+
+2. **Interest accrues.** While your USDC sits in Blend, the exchange rate
+   (bRate) slowly rises. That means the pool's total value grows over time,
+   even though nobody added more money. The growth is pure yield from lending.
+
+3. **A weekly draw picks a winner.** Once a week, the keeper contract runs a
+   two-step commit-reveal process. First it commits a hashed secret, then
+   after a few ledgers it reveals the seed. The contract mixes the seed with
+   on-chain entropy (ledger number and timestamp) to pick one saver at random,
+   weighted by their tickets.
+
+4. **The winner gets the yield, not the principal.** The draw redeems only the
+   accrued interest from Blend. The winner's wallet receives the pot. Everyone
+   else keeps every cent of their deposit.
+
+5. **You can withdraw anytime.** At any point you can pull your full principal
+   back. The contract redeems exactly your share from Blend and sends you USDC.
+   There is no lock-in unless you chose one.
+
+## The pot and odds
+
+The "pot" is the difference between the current Blend value of the pool and
+the total principal held by all savers. If the pool holds $10,000 in Blend
+but savers deposited $9,950, the pot is $50. That $50 is the yield available
+for the next draw.
+
+Your odds of winning are proportional to your share of total tickets. The
+formula is simple:
+
 ```
-contracts/prize-pool   Soroban contract (Rust) — accounting, Blend, draw, lock
-web/                   Next.js frontend (landing + pool app) — working
-keeper/                weekly commit/reveal draw job — working
-docs/                  BUILD.md, setup, threat notes
-cation-prd.md          product requirements
+your tickets = your deposit x number of ledgers you've held it
+your odds = your tickets / total tickets across all savers
 ```
 
-## Status
-| Step | What | State |
-|------|------|-------|
-| 0 | Repo scaffold | done |
-| 1 | Contract core (deposit/withdraw/pot/tickets) | done, 6 tests green |
-| 2 | Lock + early-exit penalty | done (in contract) |
-| 3 | Commit-reveal draw | done (in contract) |
-| — | Real Blend wiring (`submit`/`get_positions`/`b_rate`) | done, compiles to wasm; runtime verified on testnet |
-| 4 | Deploy testnet | done: deployed + initialized. **Full loop incl. draw verified live** vs real Blend — deposit→supply, time-weighted tickets, pot=yield, withdraw→redeem, commit-reveal draw (winner paid yield-only, principal intact), no-loss. See [docs/TESTNET.md](docs/TESTNET.md). |
-| 5 | Wallet + frontend | **working**: Next.js app (landing + pool home), live chain reads, deposit + withdraw via Freighter/xBull/Lobstr. Stellar Wallets Kit wired, mobile responsive (375px+) with loading skeletons and toasts. |
-| 6 | History via events | draw history reads on-chain `draw` events via RPC `getEvents` (`/app/history`, `/api/history`) — no Mercury needed for the MVP. |
-| — | Draw history + win reveal | **working**: history page + scratch-card win reveal; verified live (keeper drew, connected wallet won → reveal fired). |
-| — | Polish | loading skeletons, success/error toasts, mobile pass (375px), odds clamped to 100%. |
-| 7 | Keeper cron | **working**: SDK keeper commits+reveals when the draw window opens; ran a full autonomous draw on testnet (winner paid, epoch advanced). Cron-ready ([keeper/README.md](keeper/README.md)). |
-| 8 | E2E + 10 users | pending |
+This means two things matter: how much you deposit and how long you keep it
+there. A bigger deposit earns more tickets, but so does holding for longer.
+Someone who deposited $100 a month ago has more tickets than someone who
+just deposited $100 today. This rewards loyalty, not last-minute deposits.
+
+When you top up an existing deposit, the contract recalculates your holding
+start as a weighted average. This prevents someone from gaming the system by
+adding small amounts right before a draw to inflate their ticket count.
+
+## Fairness and draw mechanism
+
+The draw uses a commit-reveal scheme to ensure the keeper cannot manipulate
+the outcome:
+
+1. **Commit phase:** The keeper submits `sha256(seed)` on-chain before the
+   draw window opens. At this point the seed is hidden, so the keeper is
+   committed to a specific value.
+
+2. **Reveal phase:** After the draw window opens, the keeper reveals the raw
+   seed. The contract verifies that `sha256(seed)` matches the committed
+   hash. If it doesn't, the reveal is rejected.
+
+3. **Entropy mixing:** The revealed seed is mixed with the current ledger
+   sequence number and timestamp using SHA-256. This adds on-chain entropy
+   that the keeper couldn't have predicted at commit time.
+
+4. **Weighted selection:** The resulting random number is reduced to a u64
+   and used to pick a winner proportional to ticket weights. The winner
+   receives only the pot amount (the yield). Principal is never touched.
+
+The draw also publishes an on-chain event with the winner, amount, and epoch
+number. You can verify the result yourself on Stellar Expert.
+
+### Early exit and penalties
+
+Cation lets you lock your deposit for 3 to 90 days. While locked, you cannot
+withdraw (the contract enforces this on-chain, not through app rules). If you
+really need to pull your money out early, you can, but you pay a penalty of
+5% (configurable in basis points). That penalty stays in the pool and flows
+into the prize pot, so other savers benefit from your early exit.
+
+## Tech stack
+
+### Smart contract (Soroban, Rust)
+
+The core is a Soroban smart contract written in Rust. It handles:
+
+- Deposit and withdrawal with Blend supply/redeem
+- Time-weighted ticket accounting
+- On-chain lock enforcement with early exit penalties
+- Commit-reveal draw with entropy mixing
+- Event emission for history and notifications
+
+The contract compiles to WebAssembly and is deployed on Stellar testnet.
+See `docs/BUILD.md` for toolchain details.
+
+### Blend integration
+
+[Blend](https://www.blend.capital/) is the yield source. The contract
+supplies USDC into a conservative fixed-USDC lending pool and earns interest
+as bTokens appreciate. The contract is a supplier only, meaning it never
+provides liquidity to AMMs or takes on exotic collateral. This keeps
+principal safe.
+
+We run our own Blend stack on testnet so USDC is mintable for onboarding
+users. The official testnet USDC has an issuer-gated supply, so we deployed
+a parallel pool with our own USDC contract.
+
+### Frontend (Next.js, React, Tailwind)
+
+The web app is built with Next.js 16 (App Router), React 19, and Tailwind
+CSS 4. Key features:
+
+- **Landing page** with an interactive wave background (React Three Fiber)
+- **Pool app** at `/app` showing pot, countdown, balance, odds, and
+  deposit/withdraw forms
+- **Draw history** at `/app/history` reading on-chain events via RPC
+- **Win reveal** scratch-card animation when you win
+- **Notification bell** polling for new draw results
+- **Mobile responsive** down to 375px width
+- **Loading skeletons** and toast notifications for better UX
+
+### Wallet connection
+
+Cation uses [Stellar Wallets Kit](https://github.com/Creit-Tech/stellar-wallets-kit)
+to support Freighter, xBull, Lobstr, Albedo, and Hana. The wallet picker
+modal is styled to match the Cation design system (violet primary, cloud
+background, chunky rounded cards).
+
+### Keeper
+
+The keeper is a Node.js script (`keeper/draw.mjs`) that runs the weekly
+draw automatically. It can be triggered via GitHub Actions on a daily cron.
+The keeper no-ops until the draw window is open, so frequent runs are safe.
+
+See `keeper/README.md` for setup and scheduling.
+
+## Project structure
+
+```
+contracts/prize-pool/     Soroban smart contract (Rust)
+  src/lib.rs              Core logic: deposit, withdraw, draw, tickets
+  src/blend.rs            Blend pool interface (supply, redeem, value)
+  src/types.rs            Data types and error definitions
+  src/test.rs             Native unit tests (6 green)
+  wasm/blend_pool.wasm    Blend pool ABI for contractimport
+
+web/                      Next.js frontend
+  app/page.tsx            Landing page
+  app/app/page.tsx        Pool home (pot, balance, deposit, withdraw)
+  app/app/history/        Draw history
+  app/how-it-works/       How it works explainer
+  components/             React components (Navbar, Footer, forms, etc.)
+  lib/client/wallet.ts    Wallet connection and signing
+  lib/server/             Server-side contract reads
+  lib/config.ts           Network and contract addresses
+
+keeper/                   Weekly draw automation
+  draw.mjs                Commit-reveal draw script
+
+docs/                     Documentation
+  BUILD.md                How to build and deploy the contract
+  TESTNET.md              Testnet deployment details and validation
+
+config/                   Environment config
+  testnet.env             Testnet addresses and parameters
+```
 
 ## Testnet deployment
-Active stack (our own Blend deploy so USDC is mintable — full detail in
-[docs/TESTNET.md](docs/TESTNET.md)):
-- PrizePool (active): `CC5JEG6QSEETBZKPSUIWEGSPOT63Z7QVBVP4CXGH2MXB5O5CBV323IZ6`
-- USDC (mintable, issuer = `cation-admin`): `CASWO3VWUS5LQNESTAOL2FJPPPCEV6BT27UVBED2JUYNSRV5QNEB2KKI`
-- Blend pool: `CAYFESJVBO2OLTRYGYDS46MLDKONFYCRSE4HEJ3D75LCIDHF63RA22LY`
-- Admin/keeper/issuer key: alias `cation-admin`
-- Params: draw_interval 120960 ledgers (~7d), penalty 500 bps (5%)
-- Config: [config/testnet.env](config/testnet.env) · deploy: [scripts/deploy-testnet.sh](scripts/deploy-testnet.sh)
-- Live: `https://cation.vercel.app` (Vercel, testnet) · Explorer: `https://stellar.expert/explorer/testnet/contract/CC5JEG6QSEETBZKPSUIWEGSPOT63Z7QVBVP4CXGH2MXB5O5CBV323IZ6`
 
-## Level 4 (Green Belt) — production checklist
-- [x] Production MVP (contract + web + keeper) on Stellar testnet, 6 snapshot tests green
-- [x] Stable frontend (Next.js 16, Tailwind, mobile responsive, skeletons/toasts/error boundaries)
-- [x] Navbar fixed, landing CTA `bg-white` visible, `Under the hood` removed, footer `Stellar + Blend` only (passkeys removed)
-- [x] Monitoring: Vercel Analytics + Speed Insights (web/lib/analytics) + GH Actions keeper cron
-- [x] `public` repo, 15+ commits (see log), contract deployed `CC5JEG...`
-- [ ] 10 real users + wallet interaction proofs (collect via /app faucet, export `api/history` screenshots)
-- [ ] User feedback (form → sheet, summary in `docs/FEEDBACK.md`)
-- [ ] Demo video (2-3 min) + screenshots (landing, mobile, app, analytics)
-- Remaining to hand in: `Live demo link`, `Demo video link`, `Proof 10 wallets`, `Feedback summary` — see `docs/SUBMISSION.md`
+The contract is live on Stellar testnet:
 
-## Decisions locked
-- Tickets: full time-weighted, `weight = amount × ledgers_held`, weighted-avg start on top-up.
-- Lock: 3–90 days, strict on-chain + early exit with flat-% penalty → pot.
-- Randomness: commit-reveal (MVP), VRF-Soroban later.
-- Yield: Blend, supplier-only, vanilla fixed-USDC pool.
-- Indexer: Mercury (Zephyr program); fallback RPC `getEvents` + Postgres.
+- **PrizePool:** `CC5JEG6QSEETBZKPSUIWEGSPOT63Z7QVBVP4CXGH2MXB5O5CBV323IZ6`
+- **USDC:** `CASWO3VWUS5LQNESTAOL2FJPPPCEV6BT27UVBED2JUYNSRV5QNEB2KKI`
+- **Blend pool:** `CAYFESJVBO2OLTRYGYDS46MLDKONFYCRSE4HEJ3D75LCIDHF63RA22LY`
+- **Draw interval:** 120,960 ledgers (~7 days)
+- **Early exit penalty:** 500 bps (5%)
 
-## Build & test
-Contract — see [docs/BUILD.md](docs/BUILD.md):
+Config lives in `config/testnet.env`. Deploy scripts are in
+`scripts/deploy-testnet.sh`.
+
+You can verify the contract on
+[Stellar Expert](https://stellar.expert/explorer/testnet/contract/CC5JEG6QSEETBZKPSUIWEGSPOT63Z7QVBVP4CXGH2MXB5O5CBV323IZ6).
+
+## Getting started
+
+### Prerequisites
+
+- Rust 1.97+ with `wasm32v1-none` target
+- Stellar CLI 25+
+- Node.js 22+
+- A Stellar wallet (Freighter recommended)
+
+### Build the contract
+
 ```bash
+# Run tests
 cargo test -p prize-pool
+
+# Build wasm
+cargo rustc -p prize-pool --release --target wasm32v1-none --crate-type cdylib
+
+# Optimize for deploy
+stellar contract optimize --wasm target/wasm32v1-none/release/prize_pool.wasm
 ```
-Frontend (needs `web/.env.local` with `CATION_ADMIN_SECRET` +
-`NEXT_PUBLIC_USDC_ISSUER` for the faucet):
+
+### Run the frontend
+
 ```bash
-cd web && npm run dev
+cd web
+cp .env.example .env.local  # fill in CATION_ADMIN_SECRET and NEXT_PUBLIC_USDC_ISSUER
+npm install
+npm run dev
 ```
-Landing at `/`, pool app at `/app`. Connect creates a local testnet keypair,
-funds it via friendbot, and mints test USDC; deposit/withdraw hit the deployed
-contract. Regenerate contract bindings after a redeploy:
-`stellar contract bindings typescript --network testnet --id <ID> --output-dir web/packages/prize-pool-client --overwrite`.
+
+The landing page is at `http://localhost:3000` and the pool app is at
+`/app`. Connect your wallet, grab some test USDC from the faucet, and
+you're ready to deposit.
+
+### Run the keeper
+
+```bash
+cd keeper
+npm install
+POOL_ID=<contract-address> KEEPER_SECRET=<admin-secret> npm run draw
+```
+
+The keeper checks if the draw window is open and runs the commit-reveal
+flow if it is. Otherwise it prints how many ledgers remain and exits.
+
+## Security invariants
+
+The contract maintains three core invariants:
+
+1. **Payout never exceeds the pot.** The draw can only redeem the accrued
+   yield, never the principal. Your deposit is safe.
+
+2. **Total principal matches the sum of all user balances.** Every USDC
+   accounted for belongs to someone.
+
+3. **Non-winners can always withdraw.** Unless you explicitly locked your
+   deposit, your full principal is always redeemable from Blend.
+
+## License
+
+See `LICENSE` for details.
