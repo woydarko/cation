@@ -5,6 +5,8 @@ import { WalletProvider } from "@/components/WalletProvider";
 import { ToastProvider } from "@/components/Toast";
 import Navbar from "@/components/Navbar";
 import ExtensionErrorGuard from "@/components/ExtensionErrorGuard";
+import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 // Data font (amounts, odds, countdown) - PRD §6.1.
 const spaceMono = Space_Mono({
@@ -54,6 +56,8 @@ export default function RootLayout({
             {children}
           </ToastProvider>
         </WalletProvider>
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );

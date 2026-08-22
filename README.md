@@ -4,12 +4,12 @@
 
 Cation is a no-loss prize-linked savings dApp built on Stellar. Everyone's
 USDC is pooled together and supplied to [Blend](https://www.blend.capital/)
-to earn yield. Once a week, all that accrued yield goes to one winner through
-a provably fair draw. If you don't win, your money is still there in full,
-and you can pull it out whenever you want.
+to earn yield. Every day at 00:00 UTC, all that accrued yield goes to one
+winner through a provably fair draw. If you don't win, your money is still
+there in full, and you can pull it out whenever you want.
 
 Think of it like a savings account where the bank's interest rate becomes a
-weekly lottery. But unlike a lottery, nobody ever loses their deposit.
+daily lottery. But unlike a lottery, nobody ever loses their deposit.
 
 ## How it works
 
@@ -23,7 +23,7 @@ The whole system follows a simple loop:
    (bRate) slowly rises. That means the pool's total value grows over time,
    even though nobody added more money. The growth is pure yield from lending.
 
-3. **A weekly draw picks a winner.** Once a week, the keeper contract runs a
+3. **A daily draw picks a winner.** Every day at 00:00 UTC, the keeper runs a
    two-step commit-reveal process. First it commits a hashed secret, then
    after a few ledgers it reveals the seed. The contract mixes the seed with
    on-chain entropy (ledger number and timestamp) to pick one saver at random,
@@ -48,7 +48,7 @@ flowchart LR
   U[You] -->|deposit USDC| P[PrizePool Contract]
   P -->|supply USDC| B[Blend Lending Pool]
   B -->|yield via bRate| P
-  P -->|pot equals yield only| D{Weekly Draw}
+  P -->|pot equals yield only| D{Daily Draw}
   K[Keeper] -->|commit hash then reveal seed| D
   D -->|payout pot| W[Winner]
   P -->|withdraw principal anytime| U
@@ -156,9 +156,10 @@ as bTokens appreciate. The contract is a supplier only, meaning it never
 provides liquidity to AMMs or takes on exotic collateral. This keeps
 principal safe.
 
-We run our own Blend stack on testnet so USDC is mintable for onboarding
-users. The official testnet USDC has an issuer-gated supply, so we deployed
-a parallel pool with our own USDC contract.
+We use Circle's official testnet USDC. Because the stock Blend testnet pools
+were not activated for it, we deployed our own Blend pool (via the factory)
+with Circle USDC as an active reserve, so deposits supply real Blend yield.
+Grab test USDC from https://faucet.circle.com/ .
 
 ### Frontend (Next.js, React, Tailwind)
 
@@ -183,8 +184,8 @@ background, chunky rounded cards).
 
 ### Keeper
 
-The keeper is a Node.js script (`keeper/draw.mjs`) that runs the weekly
-draw automatically. It can be triggered via GitHub Actions on a daily cron.
+The keeper is a Node.js script (`keeper/draw.mjs`) that runs the daily
+draw automatically. It is triggered via GitHub Actions on a cron at 00:00 UTC.
 The keeper no-ops until the draw window is open, so frequent runs are safe.
 
 See `keeper/README.md` for setup and scheduling.
@@ -209,7 +210,7 @@ web/                      Next.js frontend
   lib/server/             Server-side contract reads
   lib/config.ts           Network and contract addresses
 
-keeper/                   Weekly draw automation
+keeper/                   Daily draw automation
   draw.mjs                Commit-reveal draw script
 
 docs/                     Documentation
@@ -222,12 +223,12 @@ config/                   Environment config
 
 ## Testnet deployment
 
-The contract is live on Stellar testnet (Circle USDC, deployed 2026-08-22):
+The contract is live on Stellar testnet (Circle USDC, active Blend pool):
 
-- **PrizePool:** `CCH4D3UDFBESA7EXY7SPCZTM5CLJQGGOSO4B4XWBFSJCDUY5HRUSXKEB`
+- **PrizePool:** `CD6HCV2ZMD7KEWAISBNAUNJPQONAK3PMUDZZDIXA3WUZTHVIAUMXJAPE`
 - **USDC:** `CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA` (Circle `USDC:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5`)
-- **Blend pool (CationCircle):** `CAVWW7H5OAG6KT5XZVAUJC5VQGUNWMQRLG5J64QU6C2GOBQFAWWXBL74`
-- **Draw interval:** 17,280 ledgers (~1 day)
+- **Blend pool (CationCircle, status active):** `CDCCWAQCFXSJOWTYQRI4NPBVGC3NQDR3626MLOEAWLHXUECCASSW5ZPX`
+- **Draw interval:** 17,280 ledgers (~1 day), drawn at 00:00 UTC
 - **Early exit penalty:** 500 bps (5%)
 
 Config lives in `config/testnet.env`. Deploy scripts are in
@@ -236,7 +237,7 @@ Config lives in `config/testnet.env`. Deploy scripts are in
 Claim test USDC at https://faucet.circle.com/ , then add trustline `USDC:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5`.
 
 You can verify the contract on
-[Stellar Expert](https://stellar.expert/explorer/testnet/contract/CCH4D3UDFBESA7EXY7SPCZTM5CLJQGGOSO4B4XWBFSJCDUY5HRUSXKEB).
+[Stellar Expert](https://stellar.expert/explorer/testnet/contract/CD6HCV2ZMD7KEWAISBNAUNJPQONAK3PMUDZZDIXA3WUZTHVIAUMXJAPE).
 
 ## Getting started
 
@@ -264,14 +265,17 @@ stellar contract optimize --wasm target/wasm32v1-none/release/prize_pool.wasm
 
 ```bash
 cd web
-cp .env.example .env.local  # fill in CATION_ADMIN_SECRET and NEXT_PUBLIC_USDC_ISSUER
 npm install
 npm run dev
 ```
 
-The landing page is at `http://localhost:3000` and the pool app is at
-`/app`. Connect your wallet, grab some test USDC from the faucet, and
-you're ready to deposit.
+No env vars are required on testnet (addresses and Circle's USDC issuer are
+baked into `lib/config.ts`; see `.env.example` for optional overrides).
+
+The landing page is at `http://localhost:3000` and the pool app is at `/app`.
+Connect your wallet, claim test USDC at https://faucet.circle.com/ and add
+the Circle USDC trustline (the "Get test USDC" button sets it up), then
+deposit.
 
 ### Run the keeper
 

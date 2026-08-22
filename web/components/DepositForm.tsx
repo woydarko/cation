@@ -4,6 +4,7 @@ import { AmountInput } from "./Sheet";
 import { useWallet } from "./WalletProvider";
 import { useToast } from "./Toast";
 import { toStroops, toUsdc, formatUsdc } from "@/lib/format";
+import { track } from "@/lib/analytics";
 
 const LEDGERS_PER_DAY = 17280;
 const LOCK_PRESETS = [7, 30, 90];
@@ -42,6 +43,7 @@ export default function DepositForm({
     try {
       const lockUntil = lock ? BigInt(currentLedger + lockDays * LEDGERS_PER_DAY) : 0n;
       await deposit(toStroops(n), lockUntil);
+      track("deposit", { amount: n, locked: lock });
       toast("success", `Added $${n}. You're in the draw.`);
       setAmount("");
       onDone();

@@ -13,6 +13,8 @@
     "@react-three/drei": "^10.7.8",
     "@react-three/fiber": "^9.7.0",
     "@stellar/stellar-sdk": "^16.2.0",
+    "@vercel/analytics": "^2.0.1",
+    "@vercel/speed-insights": "^2.0.0",
     "next": "16.3.1",
     "prize-pool-client": "file:packages/prize-pool-client",
     "react": "19.2.8",
