@@ -2,8 +2,7 @@
 
 **Save money, win the interest, never lose a cent.**
 
-**Live demo:** https://cation-henna.vercel.app
-**Demo video:** https://youtu.be/vstzwRWsTg0
+🌐 **[Live demo](https://cation-henna.vercel.app)** &nbsp;·&nbsp; 🎥 **[Demo video](https://youtu.be/vstzwRWsTg0)** &nbsp;·&nbsp; 📝 **[Give feedback](https://docs.google.com/forms/d/e/1FAIpQLSfGVy1i2Nh0uQni2akNtCSQ_gsmgT0oPM9xbidhPcg2ynTiIA/viewform)**
 
 Cation is a no-loss prize-linked savings dApp built on Stellar. Everyone's
 USDC is pooled together and supplied to [Blend](https://www.blend.capital/)
