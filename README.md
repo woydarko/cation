@@ -317,6 +317,10 @@ phase is about proof.
   deposit flow, plus an odds tooltip that explains the time-weighted tickets.
 - Verifiable randomness (on-chain VRF) for the draw, replacing the
   commit-reveal scheme we use on testnet.
+- A real brand identity: a proper logo, a custom illustration and motion
+  style, and a design system that makes Cation instantly recognizable instead
+  of looking like a template. Trust starts with looking like you are here to
+  stay.
 
 ### Phase 2 — Mainnet launch
 - Go live on Stellar mainnet with Circle USDC and a vetted Blend pool.
