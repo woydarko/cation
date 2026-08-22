@@ -304,6 +304,43 @@ The contract maintains three core invariants:
 3. **Non-winners can always withdraw.** Unless you explicitly locked your
    deposit, your full principal is always redeemable from Blend.
 
+## Roadmap
+
+Cation works today on testnet. The plan from here keeps one thing fixed: your
+principal is never at risk, and prizes only ever come from yield. Everything
+below builds on that promise instead of bending it.
+
+### Phase 1 — Trustworthy by default (next)
+The clearest signal from our first testers was trust, not features. So this
+phase is about proof.
+- Independent smart-contract audit before any mainnet funds.
+- A "where your money goes and what can go wrong" panel right inside the
+  deposit flow, plus an odds tooltip that explains the time-weighted tickets.
+- Verifiable randomness (on-chain VRF) for the draw, replacing the
+  commit-reveal scheme we use on testnet.
+
+### Phase 2 — Mainnet launch
+- Go live on Stellar mainnet with Circle USDC and a vetted Blend pool.
+- Introduce a small protocol fee taken only from the generated yield, never
+  from anyone's deposit. This is how Cation sustains itself: we earn a sliver
+  of the interest, savers keep every cent of principal, and one of them wins
+  the rest each day.
+- Public dashboard for total value saved, yield generated, and prizes paid.
+
+### Phase 3 — More ways to save and win
+- Multiple pools: different assets and different draw cadences (daily, weekly,
+  jackpot rounds) so savers pick their own risk and rhythm.
+- Loyalty boosts for longer locks, and a referral program that shares a cut of
+  the protocol fee, not your principal.
+- Sponsored prize pools: partners and brands top up the pot, so prizes can grow
+  faster than yield alone.
+
+### Phase 4 — Open and everywhere
+- Move draw parameters and treasury decisions to community governance.
+- Reach savers beyond Stellar. We already collect rewards on EVM networks, so
+  cross-chain deposits and payouts are a natural next step.
+- Open the pool API so other apps can offer "save and win" on top of Cation.
+
 ## License
 
 See `LICENSE` for details.
