@@ -4,12 +4,12 @@
 
 Cation uses Circle official testnet USDC (`USDC:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5`, SAC `CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA`). Users claim it themselves at https://faucet.circle.com/ . There is no internal mint.
 
-## Live addresses
+## Live addresses (Circle USDC, deployed 2026-08-22)
 | Thing | Address |
 |-------|---------|
-| PrizePool (active) | `CC5JEG6QSEETBZKPSUIWEGSPOT63Z7QVBVP4CXGH2MXB5O5CBV323IZ6` |
+| PrizePool (Circle) | `CCH4D3UDFBESA7EXY7SPCZTM5CLJQGGOSO4B4XWBFSJCDUY5HRUSXKEB` |
 | USDC (Circle, testnet) | `CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA` |
-| Blend pool | `CAYFESJVBO2OLTRYGYDS46MLDKONFYCRSE4HEJ3D75LCIDHF63RA22LY` |
+| Blend pool (CationCircle) | `CAVWW7H5OAG6KT5XZVAUJC5VQGUNWMQRLG5J64QU6C2GOBQFAWWXBL74` |
 | Admin / keeper key | alias `cation-admin` |
 
 USDC has 7 decimals; reserve index 3 in the pool. bRate > 1 (yield accrues).
