@@ -37,6 +37,46 @@ The whole system follows a simple loop:
    back. The contract redeems exactly your share from Blend and sends you USDC.
    There is no lock-in unless you chose one.
 
+## System overview
+
+Everything centers on one contract. Your money goes to Blend to earn yield,
+the contract tracks who should get how many chances, and a scheduled keeper
+triggers the fair draw. Principal and yield are always kept separate.
+
+```mermaid
+flowchart LR
+  U[You] -->|deposit USDC| P[PrizePool Contract]
+  P -->|supply USDC| B[Blend Lending Pool]
+  B -->|yield via bRate| P
+  P -->|pot equals yield only| D{Weekly Draw}
+  K[Keeper] -->|commit hash then reveal seed| D
+  D -->|payout pot| W[Winner]
+  P -->|withdraw principal anytime| U
+
+  style P fill:#6c4cf1,stroke:#141234,color:#fff
+  style B fill:#c7f94b,stroke:#141234,color:#141234
+  style D fill:#ff7a5c,stroke:#141234,color:#fff
+```
+
+In plain words:
+
+* You interact only with the PrizePool. You never touch Blend directly.
+* The PrizePool is the only address that supplies to Blend. Your USDC is
+  pooled there, so `pot = Blend value minus total principal`.
+* The Keeper does not control who wins. It only triggers the draw. The
+  randomness is mixed with ledger data on chain, and the winner is picked
+  proportional to tickets.
+* If you do not win, nothing moves. If you do win, only the pot moves.
+  Your principal stays exactly where it was.
+
+```
+You -> deposit 100 USDC -> PrizePool -> supply 100 to Blend
+                          PrizePool holds ticket: 100 x ledgers held
+Blend -> bRate rises -> PrizePool now worth 100.40 -> pot = 0.40
+Keeper -> commit hash -> wait -> reveal seed -> draw -> Winner gets 0.40
+You -> withdraw 100 USDC -> PrizePool -> redeem 100 from Blend -> you get 100
+```
+
 ## The pot and odds
 
 The "pot" is the difference between the current Blend value of the pool and
