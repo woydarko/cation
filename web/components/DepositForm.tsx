@@ -108,7 +108,16 @@ export default function DepositForm({
       {error && <p className="text-coral text-sm mb-3">{error}</p>}
       {overBalance && (
         <p className="text-coral text-sm mb-3">
-          That is more than your ${formatUsdc(usdcBalance)} USDC. Get test USDC first.
+          That is more than your ${formatUsdc(usdcBalance)} USDC.{" "}
+          <a
+            href="https://faucet.circle.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline hover:text-volt"
+          >
+            Get test USDC
+          </a>{" "}
+          first.
         </p>
       )}
 

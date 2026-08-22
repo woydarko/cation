@@ -6,19 +6,16 @@ import Countdown from "@/components/Countdown";
 import WinRevealModal from "@/components/WinRevealModal";
 import Skeleton from "@/components/Skeleton";
 import { useWallet } from "@/components/WalletProvider";
-import { useToast } from "@/components/Toast";
 import { formatUsdc, secondsToNextUtcMidnight, oddsPct } from "@/lib/format";
 import type { PoolState } from "@/lib/server/contract";
 
 type Draw = { winner: string; amount: string; epoch: number };
 
 export default function Dashboard() {
-  const { address, connect, connecting, getTestUsdc } = useWallet();
-  const toast = useToast();
+  const { address, connect, connecting } = useWallet();
   const [state, setState] = useState<PoolState | null>(null);
   const [draws, setDraws] = useState<Draw[]>([]);
   const [win, setWin] = useState<{ amount: string; epoch: number } | null>(null);
-  const [fauceting, setFauceting] = useState(false);
 
   const checkDraws = useCallback(async () => {
     const r = await fetch("/api/history", { cache: "no-store" });
@@ -47,18 +44,8 @@ export default function Dashboard() {
     return () => clearInterval(id);
   }, [address, refresh]);
 
-  const claim = async () => {
-    setFauceting(true);
-    try {
-      await getTestUsdc();
-      toast("success", "Test USDC is in your wallet.");
-      refresh();
-    } catch (e) {
-      toast("error", "Could not get test USDC. Try again.");
-      console.error(e);
-    } finally {
-      setFauceting(false);
-    }
+  const claim = () => {
+    window.open("https://faucet.circle.com/", "_blank", "noopener,noreferrer");
   };
 
   // Gate: the dashboard requires a connected wallet.
@@ -145,10 +132,9 @@ export default function Dashboard() {
           </Link>
           <button
             onClick={claim}
-            disabled={fauceting}
-            className="btn py-3.5 text-base flex-1 border-2 border-ink-12 text-ink-60 disabled:opacity-50"
+            className="btn py-3.5 text-base flex-1 border-2 border-ink-12 text-ink-60"
           >
-            {fauceting ? "Getting test USDC…" : "Get test USDC"}
+            Get test USDC
           </button>
         </div>
 
