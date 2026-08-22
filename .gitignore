@@ -9,3 +9,12 @@ node_modules
 !docs/**/*.wasm
 !contracts/prize-pool/wasm/*.wasm
 test_snapshots/
+
+# private docs not for public repo
+cation-prd.md
+CLAUDE.md
+.claude/
+web/CLAUDE.md
+web/AGENTS.md
+docs/FEEDBACK.md
+docs/SUBMISSION.md
