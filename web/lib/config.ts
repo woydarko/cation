@@ -20,3 +20,7 @@ export const USDC_ISSUER =
 
 export const USDC_DECIMALS = 7;
 export const LEDGER_SECONDS = 5; // approx ledger close time on Stellar
+
+// Anonymous beta feedback form (Google Forms). Enters a monthly $USDG raffle.
+export const FEEDBACK_URL =
+  "https://docs.google.com/forms/d/e/1FAIpQLSfGVy1i2Nh0uQni2akNtCSQ_gsmgT0oPM9xbidhPcg2ynTiIA/viewform";

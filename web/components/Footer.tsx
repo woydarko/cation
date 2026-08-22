@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Wordmark from "./Wordmark";
+import { FEEDBACK_URL } from "@/lib/config";
 
 export default function Footer() {
   return (
@@ -17,6 +18,7 @@ export default function Footer() {
           links={[
             ["Open the app", "/app"],
             ["Past draws", "/app/history"],
+            ["Give feedback, win $USDG", FEEDBACK_URL],
           ]}
         />
         <FooterCol

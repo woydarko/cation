@@ -8,6 +8,7 @@ import Skeleton from "@/components/Skeleton";
 import { useWallet } from "@/components/WalletProvider";
 import { useToast } from "@/components/Toast";
 import { formatUsdc, secondsToNextUtcMidnight, oddsPct } from "@/lib/format";
+import { FEEDBACK_URL } from "@/lib/config";
 import type { PoolState } from "@/lib/server/contract";
 
 type Draw = { winner: string; amount: string; epoch: number };
@@ -191,6 +192,20 @@ export default function Dashboard() {
             </ul>
           )}
         </div>
+
+        {/* Feedback nudge — engaged users make the best critics */}
+        <a
+          href={FEEDBACK_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="card mt-6 flex items-center justify-between p-5 hover:border-volt transition-colors"
+        >
+          <span className="text-sm">
+            <span className="font-semibold">Tried it? Tell us what&apos;s broken.</span>{" "}
+            <span className="text-ink-60">Anonymous, 3 min, enters a monthly $USDG raffle.</span>
+          </span>
+          <span className="text-volt font-semibold text-sm shrink-0 ml-4">Give feedback →</span>
+        </a>
       </div>
 
       {win && (
