@@ -16,7 +16,10 @@ jobs:
         with:
           node-version: "22"
       - name: Install keeper deps
-        run: cd keeper && npm install
+        # --install-links so the file: bindings dep is installed as a real
+        # package with its own deps (@stellar/stellar-sdk), not a bare symlink
+        # whose imports fail to resolve in CI.
+        run: cd keeper && npm install --install-links
       - name: Run draw
         run: cd keeper && npm run draw
         env:
