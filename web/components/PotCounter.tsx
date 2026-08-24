@@ -39,9 +39,10 @@ export default function PotCounter({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [target]);
 
-  // Testnet yields are tiny; show more decimals when small so the pot reads
-  // as a live, non-zero number instead of $0.0000.
-  const frac = shown >= 1 ? 4 : 7;
+  // Clean 2 decimals for real amounts (standard USDC display); only fan out to
+  // more decimals when the pot is sub-dollar so tiny testnet yield still reads
+  // as a live, non-zero number instead of $0.00.
+  const frac = shown >= 1 ? 2 : shown >= 0.01 ? 4 : 6;
   const digits = shown.toLocaleString("en-US", {
     minimumFractionDigits: frac,
     maximumFractionDigits: frac,
