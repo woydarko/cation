@@ -1,20 +1,19 @@
 // Cation draw keeper.
 //
-// Runs the daily draw for one PrizePool: when the draw window is open it commits
-// a hashed random seed, waits a few ledgers so the mixed-in ledger entropy is
-// not known at commit time, then reveals to pick and pay a ticket-weighted
-// winner. Designed for a scheduled cron (GitHub Actions). No-ops until the draw
-// window is open, so frequent runs are safe.
+// Runs the daily draw for one PrizePool. When the draw window is open it:
+//   1. commits a hashed random seed,
+//   2. waits a few ledgers so the mixed-in ledger entropy is unknown at commit,
+//   3. reveals the seed to pick a ticket-weighted winner (records the prize),
+//   4. claims the prize so the winner is paid.
 //
-// KNOWN LIMITATION (tracked on the roadmap): reveal_draw derives the winner from
-// execution-time ledger entropy, so the winner is not known at simulation time
-// and the paying transfer's footprint cannot include the real winner's trustline
-// ahead of time. When the pot is non-zero the reveal therefore traps. The
-// planned fix is a pull-based prize: reveal only records the winner and amount,
-// and the winner claims in their own transaction (their trustline is naturally
-// in that footprint). Until then a non-zero payout is deferred, not lost: the
-// principal and pot stay in the pool. We catch that specific case and exit 0 so
-// the schedule stays healthy.
+// reveal and claim are split on purpose: the winner is chosen from
+// execution-time ledger entropy, so it is unknown when reveal is simulated and
+// the winner's trustline cannot be in that transaction's footprint. claim_prize
+// pays out where the winner is already fixed in storage, so its footprint is
+// correct. Both are plain contract calls — no hand-built footprints.
+//
+// Designed for a scheduled cron (GitHub Actions). No-ops until the draw window
+// is open, so frequent runs are safe.
 //
 // Env:
 //   KEEPER_SECRET   S… secret of the admin/keeper key
@@ -67,14 +66,6 @@ async function withRetry(label, fn, tries = 4) {
   throw last;
 }
 
-// The footprint trap only bites when a real prize must be transferred to the
-// randomly-selected winner (see KNOWN LIMITATION above). Recognise it so the
-// scheduled run reports success instead of a hard failure.
-function isPayoutFootprintTrap(err) {
-  const s = String(err?.message ?? err);
-  return s.includes("HostFunctionTrapped") || s.includes("footprint");
-}
-
 async function main() {
   const cfg = (await client.get_config()).result;
   const now = await ledger();
@@ -98,25 +89,20 @@ async function main() {
   while ((await ledger()) < target) await sleep(3000);
 
   console.log("revealing draw…");
-  try {
-    const res = await withRetry("reveal", async () =>
-      (await client.reveal_draw({ seed })).signAndSend()
-    );
-    const winner = res.result;
-    const pot = (await client.pot()).result;
-    console.log(`draw done. winner=${winner}. epoch is now ${cfg.epoch + 1}. pot reset (now ${pot}).`);
-  } catch (e) {
-    if (isPayoutFootprintTrap(e)) {
-      const pot = (await client.pot()).result;
-      console.warn(
-        `reveal deferred: non-zero payout (pot=${pot}) hits the known footprint ` +
-          `limitation; principal and pot are safe in the pool. Fix tracked on the ` +
-          `roadmap (pull-based prize claim). Exiting clean.`
-      );
-      return;
-    }
-    throw e;
-  }
+  const revealed = await withRetry("reveal", async () =>
+    (await client.reveal_draw({ seed })).signAndSend()
+  );
+  const winner = revealed.result;
+
+  console.log("claiming prize…");
+  const claimed = await withRetry("claim", async () =>
+    (await client.claim_prize()).signAndSend()
+  );
+
+  const pot = (await client.pot()).result;
+  console.log(
+    `draw done. winner=${winner} paid=${claimed.result}. epoch is now ${cfg.epoch + 1}. pot now ${pot}.`
+  );
 }
 
 main().catch((e) => {

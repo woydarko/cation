@@ -90,11 +90,43 @@ fn draw_pays_only_yield_principal_intact() {
     s.pool.commit_draw(&seed_hash);
     let winner = s.pool.reveal_draw(&seed);
 
+    // reveal records the prize but does not pay yet (winner claims separately)
+    assert_eq!(bal(&s, &winner), 0);
+
+    let paid_to = s.pool.claim_prize();
+    assert_eq!(paid_to, winner);
     // winner got the full pot, pot now empty, principals untouched
     assert_eq!(bal(&s, &winner), 40);
     assert_eq!(s.pool.pot(), 0);
     assert_eq!(s.pool.balance_of(&a), 100);
     assert_eq!(s.pool.balance_of(&b), 300);
+}
+
+#[test]
+fn cannot_draw_again_with_unclaimed_prize() {
+    let s = setup(0, 10);
+    let a = Address::generate(&s.env);
+    deposit(&s, &a, 100, 0);
+    accrue_yield(&s, 40);
+    s.env.ledger().with_mut(|l| l.sequence_number += 20);
+
+    let seed = BytesN::from_array(&s.env, &[7u8; 32]);
+    let seed_hash = s
+        .env
+        .crypto()
+        .sha256(&Bytes::from_array(&s.env, &[7u8; 32]))
+        .to_bytes();
+    s.pool.commit_draw(&seed_hash);
+    s.pool.reveal_draw(&seed);
+
+    // a second draw before claiming the first prize is rejected
+    s.env.ledger().with_mut(|l| l.sequence_number += 20);
+    s.pool.commit_draw(&seed_hash);
+    assert!(s.pool.try_reveal_draw(&seed).is_err());
+
+    // after claiming, the next draw works
+    s.pool.claim_prize();
+    assert_eq!(bal(&s, &a), 40);
 }
 
 #[test]

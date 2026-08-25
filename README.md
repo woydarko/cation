@@ -121,8 +121,13 @@ the outcome:
    that the keeper couldn't have predicted at commit time.
 
 4. **Weighted selection:** The resulting random number is reduced to a u64
-   and used to pick a winner proportional to ticket weights. The winner
-   receives only the pot amount (the yield). Principal is never touched.
+   and used to pick a winner proportional to ticket weights. The reveal redeems
+   only the pot (the yield) out of Blend and records the winner; principal is
+   never touched.
+
+5. **Payout:** A separate `claim_prize` call pays the recorded winner. It is
+   permissionless and can only pay the winner the draw picked. See "Why the draw
+   pays in two steps" below for why the transfer is split out.
 
 The draw also publishes an on-chain event with the winner, amount, and epoch
 number. You can verify the result yourself on Stellar Expert.
@@ -144,7 +149,7 @@ The core is a Soroban smart contract written in Rust. It handles:
 - Deposit and withdrawal with Blend supply/redeem
 - Time-weighted ticket accounting
 - On-chain lock enforcement with early exit penalties
-- Commit-reveal draw with entropy mixing
+- Commit-reveal draw with entropy mixing, and a separate `claim_prize` payout
 - Event emission for history and notifications
 
 The contract compiles to WebAssembly and is deployed on Stellar testnet.
@@ -227,7 +232,7 @@ config/                   Environment config
 
 The contract is live on Stellar testnet (Circle USDC, active Blend pool):
 
-- **PrizePool:** `CD6HCV2ZMD7KEWAISBNAUNJPQONAK3PMUDZZDIXA3WUZTHVIAUMXJAPE`
+- **PrizePool:** `CA2R26QQEXNMQ6CXFINDKPKTEDUWV6E3OWSHPMEO62PSNOYR2QZ4QILW`
 - **USDC:** `CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA` (Circle `USDC:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5`)
 - **Blend pool (CationCircle, status active):** `CDCCWAQCFXSJOWTYQRI4NPBVGC3NQDR3626MLOEAWLHXUECCASSW5ZPX`
 - **Draw interval:** 17,280 ledgers (~1 day), drawn at 00:00 UTC
@@ -239,7 +244,7 @@ Config lives in `config/testnet.env`. Deploy scripts are in
 Claim test USDC at https://faucet.circle.com/ , then add trustline `USDC:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5`.
 
 You can verify the contract on
-[Stellar Expert](https://stellar.expert/explorer/testnet/contract/CD6HCV2ZMD7KEWAISBNAUNJPQONAK3PMUDZZDIXA3WUZTHVIAUMXJAPE).
+[Stellar Expert](https://stellar.expert/explorer/testnet/contract/CA2R26QQEXNMQ6CXFINDKPKTEDUWV6E3OWSHPMEO62PSNOYR2QZ4QILW).
 
 ## Getting started
 
@@ -303,23 +308,27 @@ The contract maintains three core invariants:
 3. **Non-winners can always withdraw.** Unless you explicitly locked your
    deposit, your full principal is always redeemable from Blend.
 
-## Known limitations
+## Why the draw pays in two steps
 
-The draw is a two-step commit-reveal. `reveal_draw` picks the winner using
-execution-time ledger entropy (so the keeper cannot grind the seed to steer the
-result), which means the winner is not known when the reveal is simulated. On
-Soroban a transaction can only touch ledger entries in its declared footprint,
-so paying a real prize to a winner who is only chosen at execution time trips
-the footprint check. The draw mechanism itself works end to end on testnet
-(commit, reveal, weighted winner selection, epoch advance are verifiable on
-Stellar Expert); the open item is only the automatic transfer of a non-zero
-pot. Principal and pot are never at risk when this happens, the payout is simply
-deferred.
+`reveal_draw` picks the winner from execution-time ledger entropy, so the keeper
+cannot grind the seed to steer the result. That also means the winner is unknown
+when the reveal is simulated, and on Soroban a transaction can only touch ledger
+entries in its declared footprint, so the reveal itself cannot pay a winner it
+does not yet know.
 
-The fix is a pull-based prize (Roadmap, Phase 1): `reveal_draw` records the
-winner and amount and emits the event, and the winner claims in their own
-transaction, where their trustline is naturally in the footprint. This also
-removes the keeper from the payout path entirely.
+So the payout is a separate call:
+
+1. **`reveal_draw`** picks the winner, redeems the pot out of Blend into the
+   contract, and records the prize (`winner`, `amount`, `epoch`). No transfer,
+   so nothing depends on knowing the winner ahead of time.
+2. **`claim_prize`** pays the recorded winner. It is permissionless (the keeper
+   calls it right after the reveal, but anyone can), and the funds only ever go
+   to the winner the draw picked. Because the winner is now fixed in storage, it
+   is in this transaction's footprint and the transfer succeeds.
+
+Principal and pot are never at risk between the two steps: the pot is already
+redeemed and earmarked for the winner. This also keeps the keeper off the payout
+path — it can trigger the claim but cannot change who gets paid.
 
 ## Roadmap
 
@@ -330,9 +339,6 @@ below builds on that promise instead of bending it.
 ### Phase 1 — Trustworthy by default (next)
 The clearest signal from our first testers was trust, not features. So this
 phase is about proof.
-- Pull-based prize claim: the draw records the winner and amount, the winner
-  claims in their own transaction. Removes the keeper from the payout path and
-  resolves the footprint limitation above.
 - Independent smart-contract audit before any mainnet funds.
 - A "where your money goes and what can go wrong" panel right inside the
   deposit flow, plus an odds tooltip that explains the time-weighted tickets.

@@ -5,7 +5,7 @@ export const FRIENDBOT_URL = "https://friendbot.stellar.org";
 
 // Deployed PrizePool (Circle USDC + active Blend pool). Keeper draws daily at 00:00 UTC.
 export const PRIZE_POOL_ID =
-  "CD6HCV2ZMD7KEWAISBNAUNJPQONAK3PMUDZZDIXA3WUZTHVIAUMXJAPE";
+  "CA2R26QQEXNMQ6CXFINDKPKTEDUWV6E3OWSHPMEO62PSNOYR2QZ4QILW";
 
 // Circle official USDC on testnet. Claim via https://faucet.circle.com/
 export const USDC_SAC = "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA";

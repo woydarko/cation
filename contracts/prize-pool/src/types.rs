@@ -33,6 +33,17 @@ pub struct PendingCommit {
     pub commit_ledger: u32,
 }
 
+/// A drawn-but-unpaid prize. reveal_draw records this (the winner is only known
+/// at execution time, so paying there would need the winner's trustline in the
+/// footprint); claim_prize pays it out where the winner is fixed.
+#[contracttype]
+#[derive(Clone)]
+pub struct Prize {
+    pub winner: Address,
+    pub amount: i128,
+    pub epoch: u32,
+}
+
 #[contracttype]
 #[derive(Clone)]
 pub enum DataKey {
@@ -41,6 +52,7 @@ pub enum DataKey {
     Deposit(Address),
     Savers,          // Vec<Address> iterated at draw time
     PendingCommit,
+    PendingPrize,    // Prize awaiting claim_prize
 }
 
 #[contracterror]
@@ -59,4 +71,5 @@ pub enum Error {
     BadReveal = 10,         // revealed seed does not match committed hash
     NoSavers = 11,
     Overflow = 12,
+    PrizeUnclaimed = 13,    // a prior draw's prize must be claimed before the next draw
 }

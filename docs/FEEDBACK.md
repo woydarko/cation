@@ -63,7 +63,7 @@ feedback to real on-chain usage.
 
 ## On-chain usage (10-wallet proof)
 Testers who shared a Stellar address, matched to on-chain activity. Verify on
-Stellar Expert (contract `CD6HCV2ZMD7KEWAISBNAUNJPQONAK3PMUDZZDIXA3WUZTHVIAUMXJAPE`).
+Stellar Expert (contract `CA2R26QQEXNMQ6CXFINDKPKTEDUWV6E3OWSHPMEO62PSNOYR2QZ4QILW`).
 
 | # | Stellar address (G…) | Action on-chain | Feedback? |
 |---|---|---|---|

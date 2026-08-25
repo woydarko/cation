@@ -7,7 +7,7 @@ export * as rpc from "@stellar/stellar-sdk/rpc";
 export declare const networks: {
     readonly testnet: {
         readonly networkPassphrase: "Test SDF Network ; September 2015";
-        readonly contractId: "CCH4D3UDFBESA7EXY7SPCZTM5CLJQGGOSO4B4XWBFSJCDUY5HRUSXKEB";
+        readonly contractId: "CA2R26QQEXNMQ6CXFINDKPKTEDUWV6E3OWSHPMEO62PSNOYR2QZ4QILW";
     };
 };
 export declare const Errors: {
@@ -47,7 +47,20 @@ export declare const Errors: {
     12: {
         message: string;
     };
+    13: {
+        message: string;
+    };
 };
+/**
+ * A drawn-but-unpaid prize. reveal_draw records this (the winner is only known
+ * at execution time, so paying there would need the winner's trustline in the
+ * footprint); claim_prize pays it out where the winner is fixed.
+ */
+export interface Prize {
+    amount: i128;
+    epoch: u32;
+    winner: string;
+}
 /**
  * Global config, set once at initialize.
  */
@@ -74,6 +87,9 @@ export type DataKey = {
     values: void;
 } | {
     tag: "PendingCommit";
+    values: void;
+} | {
+    tag: "PendingPrize";
     values: void;
 };
 /**
@@ -156,6 +172,15 @@ export interface Client {
         user: string;
     }, options?: MethodOptions) => Promise<AssembledTransaction<i128>>;
     /**
+     * Construct and simulate a claim_prize transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+     * Pay out the recorded prize to the winner the draw picked. Permissionless:
+     * anyone can trigger it (the keeper does, right after reveal), and the funds
+     * only ever go to that winner. Kept separate from reveal_draw so the winner
+     * is fixed in storage and therefore in this transaction's footprint. No-op
+     * if there is nothing to pay.
+     */
+    claim_prize: (options?: MethodOptions) => Promise<AssembledTransaction<string>>;
+    /**
      * Construct and simulate a commit_draw transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
      * Keeper commits hash(seed) before the draw window opens.
      */
@@ -203,6 +228,7 @@ export declare class Client extends ContractClient {
         get_config: (json: string) => AssembledTransaction<Config>;
         initialize: (json: string) => AssembledTransaction<null>;
         tickets_of: (json: string) => AssembledTransaction<bigint>;
+        claim_prize: (json: string) => AssembledTransaction<string>;
         commit_draw: (json: string) => AssembledTransaction<null>;
         reveal_draw: (json: string) => AssembledTransaction<string>;
         total_tickets: (json: string) => AssembledTransaction<bigint>;

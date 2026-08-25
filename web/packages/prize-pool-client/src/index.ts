@@ -34,7 +34,7 @@ if (typeof window !== "undefined") {
 export const networks = {
   testnet: {
     networkPassphrase: "Test SDF Network ; September 2015",
-    contractId: "CCH4D3UDFBESA7EXY7SPCZTM5CLJQGGOSO4B4XWBFSJCDUY5HRUSXKEB",
+    contractId: "CA2R26QQEXNMQ6CXFINDKPKTEDUWV6E3OWSHPMEO62PSNOYR2QZ4QILW",
   }
 } as const
 
@@ -50,7 +50,20 @@ export const Errors = {
   9: {message:"NoCommit"},
   10: {message:"BadReveal"},
   11: {message:"NoSavers"},
-  12: {message:"Overflow"}
+  12: {message:"Overflow"},
+  13: {message:"PrizeUnclaimed"}
+}
+
+
+/**
+ * A drawn-but-unpaid prize. reveal_draw records this (the winner is only known
+ * at execution time, so paying there would need the winner's trustline in the
+ * footprint); claim_prize pays it out where the winner is fixed.
+ */
+export interface Prize {
+  amount: i128;
+  epoch: u32;
+  winner: string;
 }
 
 
@@ -67,7 +80,7 @@ export interface Config {
   usdc_sac: string;
 }
 
-export type DataKey = {tag: "Config", values: void} | {tag: "TotalPrincipal", values: void} | {tag: "Deposit", values: readonly [string]} | {tag: "Savers", values: void} | {tag: "PendingCommit", values: void};
+export type DataKey = {tag: "Config", values: void} | {tag: "TotalPrincipal", values: void} | {tag: "Deposit", values: readonly [string]} | {tag: "Savers", values: void} | {tag: "PendingCommit", values: void} | {tag: "PendingPrize", values: void};
 
 
 /**
@@ -142,6 +155,16 @@ export interface Client {
   tickets_of: ({user}: {user: string}, options?: MethodOptions) => Promise<AssembledTransaction<i128>>
 
   /**
+   * Construct and simulate a claim_prize transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   * Pay out the recorded prize to the winner the draw picked. Permissionless:
+   * anyone can trigger it (the keeper does, right after reveal), and the funds
+   * only ever go to that winner. Kept separate from reveal_draw so the winner
+   * is fixed in storage and therefore in this transaction's footprint. No-op
+   * if there is nothing to pay.
+   */
+  claim_prize: (options?: MethodOptions) => Promise<AssembledTransaction<string>>
+
+  /**
    * Construct and simulate a commit_draw transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Keeper commits hash(seed) before the draw window opens.
    */
@@ -192,13 +215,15 @@ export class Client extends ContractClient {
         "AAAAAAAAAIRGdWxsIGNvbmZpZyAoYWRtaW4sIHRva2VucywgZHJhdyBzY2hlZHVsZSwgcGVuYWx0eSwgZXBvY2gpLiBSZWFkIGJ5IHRoZQpVSSB0byByZW5kZXIgdGhlIGNvdW50ZG93biwgY3VycmVudCBlcG9jaCwgYW5kIHBlbmFsdHkgcmF0ZS4AAAAKZ2V0X2NvbmZpZwAAAAAAAAAAAAEAAAfQAAAABkNvbmZpZwAA",
         "AAAAAAAAAENPbmUtdGltZSBzZXR1cC4gYHBlbmFsdHlfYnBzYCA9IGVhcmx5LWV4aXQgcGVuYWx0eSAoZS5nLiA1MDAgPSA1JSkuAAAAAAppbml0aWFsaXplAAAAAAAFAAAAAAAAAAVhZG1pbgAAAAAAABMAAAAAAAAACHVzZGNfc2FjAAAAEwAAAAAAAAAKYmxlbmRfcG9vbAAAAAAAEwAAAAAAAAANZHJhd19pbnRlcnZhbAAAAAAAAAQAAAAAAAAAC3BlbmFsdHlfYnBzAAAAAAQAAAAA",
         "AAAAAAAAADpUaGlzIHVzZXIncyBjdXJyZW50IHRpY2tldCB3ZWlnaHQgKGFtb3VudCAqIGxlZGdlcnMgaGVsZCkuAAAAAAAKdGlja2V0c19vZgAAAAAAAQAAAAAAAAAEdXNlcgAAABMAAAABAAAACw==",
+        "AAAAAAAAAUNQYXkgb3V0IHRoZSByZWNvcmRlZCBwcml6ZSB0byB0aGUgd2lubmVyIHRoZSBkcmF3IHBpY2tlZC4gUGVybWlzc2lvbmxlc3M6CmFueW9uZSBjYW4gdHJpZ2dlciBpdCAodGhlIGtlZXBlciBkb2VzLCByaWdodCBhZnRlciByZXZlYWwpLCBhbmQgdGhlIGZ1bmRzCm9ubHkgZXZlciBnbyB0byB0aGF0IHdpbm5lci4gS2VwdCBzZXBhcmF0ZSBmcm9tIHJldmVhbF9kcmF3IHNvIHRoZSB3aW5uZXIKaXMgZml4ZWQgaW4gc3RvcmFnZSBhbmQgdGhlcmVmb3JlIGluIHRoaXMgdHJhbnNhY3Rpb24ncyBmb290cHJpbnQuIE5vLW9wCmlmIHRoZXJlIGlzIG5vdGhpbmcgdG8gcGF5LgAAAAALY2xhaW1fcHJpemUAAAAAAAAAAAEAAAAT",
         "AAAAAAAAADdLZWVwZXIgY29tbWl0cyBoYXNoKHNlZWQpIGJlZm9yZSB0aGUgZHJhdyB3aW5kb3cgb3BlbnMuAAAAAAtjb21taXRfZHJhdwAAAAABAAAAAAAAAAlzZWVkX2hhc2gAAAAAAAPuAAAAIAAAAAA=",
         "AAAAAAAAAMRLZWVwZXIgcmV2ZWFscyB0aGUgc2VlZC4gVGhlIGNvbnRyYWN0IHZlcmlmaWVzIGl0IGhhc2hlcyB0byB0aGUgY29tbWl0LAptaXhlcyBpdCB3aXRoIGxlZGdlciBlbnRyb3B5LCBwaWNrcyBhIHRpY2tldC13ZWlnaHRlZCB3aW5uZXIsIHJlZGVlbXMKT05MWSB0aGUgcG90LCBwYXlzIHRoZSB3aW5uZXIsIGFuZCBhZHZhbmNlcyB0aGUgZXBvY2guAAAAC3JldmVhbF9kcmF3AAAAAAEAAAAAAAAABHNlZWQAAAPuAAAAIAAAAAEAAAAT",
         "AAAAAAAAADtTdW0gb2YgYWxsIHRpY2tldCB3ZWlnaHRzIHJpZ2h0IG5vdyAoZGVub21pbmF0b3IgZm9yIG9kZHMpLgAAAAANdG90YWxfdGlja2V0cwAAAAAAAAAAAAABAAAACw==",
         "AAAAAAAAAClUb3RhbCBwcmluY2lwYWwgcG9vbGVkIGFjcm9zcyBhbGwgc2F2ZXJzLgAAAAAAABR0b3RhbF9wcmluY2lwYWxfdmlldwAAAAAAAAABAAAACw==",
-        "AAAABAAAAAAAAAAAAAAABUVycm9yAAAAAAAADAAAAAAAAAAOTm90SW5pdGlhbGl6ZWQAAAAAAAEAAAAAAAAAEkFscmVhZHlJbml0aWFsaXplZAAAAAAAAgAAAAAAAAAITm90QWRtaW4AAAADAAAAAAAAAApaZXJvQW1vdW50AAAAAAAEAAAAAAAAABNJbnN1ZmZpY2llbnRCYWxhbmNlAAAAAAUAAAAAAAAAC1N0aWxsTG9ja2VkAAAAAAYAAAAAAAAADEJhZExvY2tSYW5nZQAAAAcAAAAAAAAADERyYXdOb3RSZWFkeQAAAAgAAAAAAAAACE5vQ29tbWl0AAAACQAAAAAAAAAJQmFkUmV2ZWFsAAAAAAAACgAAAAAAAAAITm9TYXZlcnMAAAALAAAAAAAAAAhPdmVyZmxvdwAAAAw=",
+        "AAAABAAAAAAAAAAAAAAABUVycm9yAAAAAAAADQAAAAAAAAAOTm90SW5pdGlhbGl6ZWQAAAAAAAEAAAAAAAAAEkFscmVhZHlJbml0aWFsaXplZAAAAAAAAgAAAAAAAAAITm90QWRtaW4AAAADAAAAAAAAAApaZXJvQW1vdW50AAAAAAAEAAAAAAAAABNJbnN1ZmZpY2llbnRCYWxhbmNlAAAAAAUAAAAAAAAAC1N0aWxsTG9ja2VkAAAAAAYAAAAAAAAADEJhZExvY2tSYW5nZQAAAAcAAAAAAAAADERyYXdOb3RSZWFkeQAAAAgAAAAAAAAACE5vQ29tbWl0AAAACQAAAAAAAAAJQmFkUmV2ZWFsAAAAAAAACgAAAAAAAAAITm9TYXZlcnMAAAALAAAAAAAAAAhPdmVyZmxvdwAAAAwAAAAAAAAADlByaXplVW5jbGFpbWVkAAAAAAAN",
+        "AAAAAQAAANdBIGRyYXduLWJ1dC11bnBhaWQgcHJpemUuIHJldmVhbF9kcmF3IHJlY29yZHMgdGhpcyAodGhlIHdpbm5lciBpcyBvbmx5IGtub3duCmF0IGV4ZWN1dGlvbiB0aW1lLCBzbyBwYXlpbmcgdGhlcmUgd291bGQgbmVlZCB0aGUgd2lubmVyJ3MgdHJ1c3RsaW5lIGluIHRoZQpmb290cHJpbnQpOyBjbGFpbV9wcml6ZSBwYXlzIGl0IG91dCB3aGVyZSB0aGUgd2lubmVyIGlzIGZpeGVkLgAAAAAAAAAABVByaXplAAAAAAAAAwAAAAAAAAAGYW1vdW50AAAAAAALAAAAAAAAAAVlcG9jaAAAAAAAAAQAAAAAAAAABndpbm5lcgAAAAAAEw==",
         "AAAAAQAAACZHbG9iYWwgY29uZmlnLCBzZXQgb25jZSBhdCBpbml0aWFsaXplLgAAAAAAAAAAAAZDb25maWcAAAAAAAcAAAAAAAAABWFkbWluAAAAAAAAEwAAAAAAAAAKYmxlbmRfcG9vbAAAAAAAEwAAAAAAAAANZHJhd19pbnRlcnZhbAAAAAAAAAQAAAAAAAAABWVwb2NoAAAAAAAABAAAAAAAAAAQbmV4dF9kcmF3X2xlZGdlcgAAAAQAAAAAAAAAC3BlbmFsdHlfYnBzAAAAAAQAAAAAAAAACHVzZGNfc2FjAAAAEw==",
-        "AAAAAgAAAAAAAAAAAAAAB0RhdGFLZXkAAAAABQAAAAAAAAAAAAAABkNvbmZpZwAAAAAAAAAAAAAAAAAOVG90YWxQcmluY2lwYWwAAAAAAAEAAAAAAAAAB0RlcG9zaXQAAAAAAQAAABMAAAAAAAAAAAAAAAZTYXZlcnMAAAAAAAAAAAAAAAAADVBlbmRpbmdDb21taXQAAAA=",
+        "AAAAAgAAAAAAAAAAAAAAB0RhdGFLZXkAAAAABgAAAAAAAAAAAAAABkNvbmZpZwAAAAAAAAAAAAAAAAAOVG90YWxQcmluY2lwYWwAAAAAAAEAAAAAAAAAB0RlcG9zaXQAAAAAAQAAABMAAAAAAAAAAAAAAAZTYXZlcnMAAAAAAAAAAAAAAAAADVBlbmRpbmdDb21taXQAAAAAAAAAAAAAAAAAAAxQZW5kaW5nUHJpemU=",
         "AAAAAQAAAOVQZXItdXNlciBzYXZpbmdzIHBvc2l0aW9uLgpUaWNrZXRzIGFyZSB0aW1lLXdlaWdodGVkOiB3ZWlnaHQgPSBhbW91bnQgKiAobm93IC0gd2VpZ2h0ZWRfc2luY2UpLgpPbiBhIHRvcC11cCwgYHdlaWdodGVkX3NpbmNlYCBpcyByZWNvbXB1dGVkIGFzIGEgd2VpZ2h0ZWQgYXZlcmFnZSBzbwpmcmVzaCBtb25leSBkb2VzIG5vdCBnZXQgdGhlIHNhbWUgd2VpZ2h0IGFzIG1vbmV5IGhlbGQgYWxsIHdlZWsuAAAAAAAAAAAAAAdEZXBvc2l0AAAAAAMAAAAAAAAABmFtb3VudAAAAAAACwAAAAAAAAAKbG9ja191bnRpbAAAAAAABgAAAAAAAAAOd2VpZ2h0ZWRfc2luY2UAAAAAAAY=",
         "AAAAAQAAAEZDb21taXQtcmV2ZWFsIGRyYXcgc3RhdGUuIEtlZXBlciBjb21taXRzIGhhc2goc2VlZCkgdGhlbiByZXZlYWxzIHNlZWQuAAAAAAAAAAAADVBlbmRpbmdDb21taXQAAAAAAAACAAAAAAAAAA1jb21taXRfbGVkZ2VyAAAAAAAABAAAAAAAAAAJc2VlZF9oYXNoAAAAAAAD7gAAACA=" ]),
       options
@@ -212,6 +237,7 @@ export class Client extends ContractClient {
         get_config: this.txFromJSON<Config>,
         initialize: this.txFromJSON<null>,
         tickets_of: this.txFromJSON<i128>,
+        claim_prize: this.txFromJSON<string>,
         commit_draw: this.txFromJSON<null>,
         reveal_draw: this.txFromJSON<string>,
         total_tickets: this.txFromJSON<i128>,

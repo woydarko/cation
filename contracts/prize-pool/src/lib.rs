@@ -28,7 +28,7 @@ mod blend_pool {
 use soroban_sdk::{
     contract, contractimpl, panic_with_error, token, vec, Address, Bytes, BytesN, Env, Vec,
 };
-use types::{Config, DataKey, Deposit, Error, PendingCommit};
+use types::{Config, DataKey, Deposit, Error, PendingCommit, Prize};
 
 /// ~5s ledgers => one day of ledgers. Used for lock-range validation.
 const LEDGERS_PER_DAY: u64 = 17_280;
@@ -258,6 +258,11 @@ impl PrizePool {
         if env.ledger().sequence() < cfg.next_draw_ledger {
             panic_with_error!(&env, Error::DrawNotReady);
         }
+        // A prior prize must be paid out before drawing again, or its redeemed
+        // funds would be stranded.
+        if env.storage().instance().has(&DataKey::PendingPrize) {
+            panic_with_error!(&env, Error::PrizeUnclaimed);
+        }
         let commit: PendingCommit = env
             .storage()
             .instance()
@@ -272,9 +277,18 @@ impl PrizePool {
         let winner = Self::pick_winner(&env, &seed);
         let prize = Self::pot(env.clone());
         if prize > 0 {
+            // Redeem the yield out of Blend into this contract now (this touches
+            // only our own position, so it is in the footprint), and record the
+            // prize. Paying the winner is deferred to claim_prize: the winner is
+            // chosen from execution-time entropy, so their trustline can't be in
+            // this transaction's footprint, but it can in the claim, where the
+            // winner is already fixed in storage.
             let this = env.current_contract_address();
             blend::redeem(&env, &cfg.blend_pool, &cfg.usdc_sac, &this, prize);
-            token::Client::new(&env, &cfg.usdc_sac).transfer(&this, &winner, &prize);
+            env.storage().instance().set(
+                &DataKey::PendingPrize,
+                &Prize { winner: winner.clone(), amount: prize, epoch: cfg.epoch },
+            );
         }
 
         cfg.epoch += 1;
@@ -287,6 +301,27 @@ impl PrizePool {
             (prize, cfg.epoch),
         );
         winner
+    }
+
+    /// Pay out the recorded prize to the winner the draw picked. Permissionless:
+    /// anyone can trigger it (the keeper does, right after reveal), and the funds
+    /// only ever go to that winner. Kept separate from reveal_draw so the winner
+    /// is fixed in storage and therefore in this transaction's footprint. No-op
+    /// if there is nothing to pay.
+    pub fn claim_prize(env: Env) -> Address {
+        let cfg = Self::config(&env);
+        let prize: Prize = match env.storage().instance().get(&DataKey::PendingPrize) {
+            Some(p) => p,
+            None => return env.current_contract_address(),
+        };
+        let this = env.current_contract_address();
+        token::Client::new(&env, &cfg.usdc_sac).transfer(&this, &prize.winner, &prize.amount);
+        env.storage().instance().remove(&DataKey::PendingPrize);
+        env.events().publish(
+            (soroban_sdk::symbol_short!("claim"), prize.winner.clone()),
+            (prize.amount, prize.epoch),
+        );
+        prize.winner
     }
 
     // ---- internal helpers -----------------------------------------------
