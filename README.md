@@ -303,6 +303,24 @@ The contract maintains three core invariants:
 3. **Non-winners can always withdraw.** Unless you explicitly locked your
    deposit, your full principal is always redeemable from Blend.
 
+## Known limitations
+
+The draw is a two-step commit-reveal. `reveal_draw` picks the winner using
+execution-time ledger entropy (so the keeper cannot grind the seed to steer the
+result), which means the winner is not known when the reveal is simulated. On
+Soroban a transaction can only touch ledger entries in its declared footprint,
+so paying a real prize to a winner who is only chosen at execution time trips
+the footprint check. The draw mechanism itself works end to end on testnet
+(commit, reveal, weighted winner selection, epoch advance are verifiable on
+Stellar Expert); the open item is only the automatic transfer of a non-zero
+pot. Principal and pot are never at risk when this happens, the payout is simply
+deferred.
+
+The fix is a pull-based prize (Roadmap, Phase 1): `reveal_draw` records the
+winner and amount and emits the event, and the winner claims in their own
+transaction, where their trustline is naturally in the footprint. This also
+removes the keeper from the payout path entirely.
+
 ## Roadmap
 
 Cation works today on testnet. The plan from here keeps one thing fixed: your
@@ -312,6 +330,9 @@ below builds on that promise instead of bending it.
 ### Phase 1 — Trustworthy by default (next)
 The clearest signal from our first testers was trust, not features. So this
 phase is about proof.
+- Pull-based prize claim: the draw records the winner and amount, the winner
+  claims in their own transaction. Removes the keeper from the payout path and
+  resolves the footprint limitation above.
 - Independent smart-contract audit before any mainnet funds.
 - A "where your money goes and what can go wrong" panel right inside the
   deposit flow, plus an odds tooltip that explains the time-weighted tickets.
