@@ -1,6 +1,6 @@
 // Cation draw keeper.
 //
-// Runs the weekly draw for one PrizePool: when the draw window is open, it
+// Runs the daily draw for one PrizePool: when the draw window is open, it
 // commits a hashed random seed, waits a few ledgers so the mixed-in ledger
 // entropy is not known at commit time, then reveals to pick and pay the winner.
 //
@@ -8,13 +8,32 @@
 // Idempotent-ish: if the draw is not yet due it exits cleanly; if a commit
 // already exists it goes straight to reveal.
 //
+// Footprint note: reveal_draw picks the winner from execution-time ledger
+// entropy, so the winner is not known at simulation time and the generated
+// client's auto-footprint omits the real winner's USDC trustline (the tx then
+// traps with "trying to access account trustline outside of the footprint").
+// We build reveal_draw by hand and add EVERY saver's USDC trustline to the
+// footprint, so whichever saver wins, their trustline is present.
+//
 // Env:
 //   KEEPER_SECRET   S… secret of the admin/keeper key
 //   POOL_ID         C… PrizePool contract id
 //   RPC_URL         (default testnet)
 //   NETWORK_PASSPHRASE (default testnet)
+//   USDC_CODE / USDC_ISSUER  the prize asset (default Circle testnet USDC)
 import { createHash, randomBytes } from "node:crypto";
-import { Keypair, rpc, contract as contractNS } from "@stellar/stellar-sdk";
+import {
+  Keypair,
+  rpc,
+  contract as contractNS,
+  Contract,
+  TransactionBuilder,
+  xdr,
+  Address,
+  Asset,
+  nativeToScVal,
+  scValToNative,
+} from "@stellar/stellar-sdk";
 import { Client } from "prize-pool-client";
 
 const RPC_URL = process.env.RPC_URL ?? "https://soroban-testnet.stellar.org";
@@ -22,6 +41,10 @@ const NETWORK_PASSPHRASE =
   process.env.NETWORK_PASSPHRASE ?? "Test SDF Network ; September 2015";
 const POOL_ID = process.env.POOL_ID;
 const KEEPER_SECRET = process.env.KEEPER_SECRET;
+const USDC_CODE = process.env.USDC_CODE ?? "USDC";
+const USDC_ISSUER =
+  process.env.USDC_ISSUER ??
+  "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5";
 const COMMIT_REVEAL_GAP = Number(process.env.COMMIT_REVEAL_GAP ?? 3); // ledgers
 
 if (!POOL_ID || !KEEPER_SECRET) {
@@ -32,6 +55,7 @@ if (!POOL_ID || !KEEPER_SECRET) {
 const keeper = Keypair.fromSecret(KEEPER_SECRET);
 const signer = contractNS.basicNodeSigner(keeper, NETWORK_PASSPHRASE);
 const server = new rpc.Server(RPC_URL);
+const usdc = new Asset(USDC_CODE, USDC_ISSUER);
 
 const client = new Client({
   contractId: POOL_ID,
@@ -60,12 +84,95 @@ async function withRetry(label, fn, tries = 4) {
   throw last;
 }
 
+// Read the contract's saver list straight from instance storage (DataKey::Savers
+// serializes as ScVal::Vec([Symbol("Savers")])). Not exposed as a view method.
+async function readSavers() {
+  const key = xdr.LedgerKey.contractData(
+    new xdr.LedgerKeyContractData({
+      contract: new Address(POOL_ID).toScAddress(),
+      key: xdr.ScVal.scvLedgerKeyContractInstance(),
+      durability: xdr.ContractDataDurability.persistent(),
+    })
+  );
+  const r = await server.getLedgerEntries(key);
+  const storage = r.entries[0].val.contractData().val().instance().storage() ?? [];
+  for (const e of storage) {
+    const k = e.key();
+    if (k.switch().name !== "scvVec") continue;
+    const v = k.vec();
+    if (v?.length === 1 && v[0].switch().name === "scvSymbol" && v[0].sym().toString() === "Savers") {
+      return scValToNative(e.val());
+    }
+  }
+  return [];
+}
+
+function trustlineKey(g) {
+  return xdr.LedgerKey.trustline(
+    new xdr.LedgerKeyTrustLine({
+      accountId: Keypair.fromPublicKey(g).xdrAccountId(),
+      asset: usdc.toTrustLineXDRObject(),
+    })
+  );
+}
+
+// Build reveal_draw by hand and widen the footprint to cover every saver's USDC
+// trustline, then sign and send. Returns the winner address.
+async function revealDraw(seed) {
+  const savers = await readSavers();
+  // ponytail: only classic (G…) savers get a trustline key; a smart-wallet
+  // (C…) winner would need its SAC balance entry instead. All current savers
+  // are G-accounts. Upgrade path: add C-address balance keys when we ship
+  // contract wallets.
+  const extra = savers.filter((a) => a.startsWith("G")).map(trustlineKey);
+  const seedScVal = nativeToScVal(Buffer.from(seed), { type: "bytes" });
+  const call = () => new Contract(POOL_ID).call("reveal_draw", seedScVal);
+
+  const simSource = await server.getAccount(keeper.publicKey());
+  const base = new TransactionBuilder(simSource, { fee: "100", networkPassphrase: NETWORK_PASSPHRASE })
+    .addOperation(call())
+    .setTimeout(120)
+    .build();
+  const sim = await server.simulateTransaction(base);
+  if (rpc.Api.isSimulationError(sim)) throw new Error(`simulate reveal_draw: ${sim.error}`);
+
+  const sd = sim.transactionData;
+  // Merge without duplicates: the simulated winner's trustline is already in
+  // the footprint, and a duplicate ledger key is rejected by the host.
+  const rw = sd.getReadWrite();
+  const seen = new Set([...rw, ...sd.getReadOnly()].map((k) => k.toXDR("base64")));
+  const toAdd = extra.filter((k) => !seen.has(k.toXDR("base64")));
+  sd.setReadWrite([...rw, ...toAdd]);
+  const resourceFee = BigInt(sim.minResourceFee) + 3_000_000n; // margin for the extra trustline reads
+  sd.setResourceFee(resourceFee);
+
+  const source = await server.getAccount(keeper.publicKey());
+  const tx = new TransactionBuilder(source, {
+    fee: (resourceFee + 100_000n).toString(),
+    networkPassphrase: NETWORK_PASSPHRASE,
+  })
+    .addOperation(call())
+    .setSorobanData(sd.build())
+    .setTimeout(120)
+    .build();
+  tx.sign(keeper);
+
+  const sent = await server.sendTransaction(tx);
+  if (sent.status === "ERROR") throw new Error(`send reveal: ${JSON.stringify(sent.errorResult ?? sent)}`);
+  let got;
+  for (let i = 0; i < 25; i++) {
+    await sleep(2000);
+    got = await server.getTransaction(sent.hash);
+    if (got.status !== "NOT_FOUND") break;
+  }
+  if (got?.status !== "SUCCESS") throw new Error(`reveal tx failed: ${JSON.stringify(got?.resultXdr ?? got?.status)}`);
+  return scValToNative(got.returnValue);
+}
+
 async function main() {
   const cfg = (await client.get_config()).result;
   const now = await ledger();
-  console.log(
-    `epoch=${cfg.epoch} next_draw_ledger=${cfg.next_draw_ledger} current=${now}`
-  );
+  console.log(`epoch=${cfg.epoch} next_draw_ledger=${cfg.next_draw_ledger} current=${now}`);
 
   if (now < Number(cfg.next_draw_ledger)) {
     console.log(`draw not due (${Number(cfg.next_draw_ledger) - now} ledgers to go)`);
@@ -85,15 +192,12 @@ async function main() {
   while ((await ledger()) < target) await sleep(3000);
 
   console.log("revealing draw…");
-  const res = await withRetry("reveal", async () =>
-    (await client.reveal_draw({ seed })).signAndSend()
-  );
-  const winner = res.result;
+  const winner = await withRetry("reveal", async () => revealDraw(seed));
   const pot = (await client.pot()).result;
-  console.log(`draw done. winner=${winner} epoch is now ${cfg.epoch + 1}. pot reset (now ${pot}).`);
+  console.log(`draw done. winner=${winner}. epoch is now ${cfg.epoch + 1}. pot reset (now ${pot}).`);
 }
 
 main().catch((e) => {
-  console.error("keeper failed:", e?.message ?? e);
+  console.error("keeper failed:", e?.stack ?? e?.message ?? e);
   process.exit(1);
 });
