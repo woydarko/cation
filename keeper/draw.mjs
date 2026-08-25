@@ -143,7 +143,16 @@ async function revealDraw(seed) {
   const seen = new Set([...rw, ...sd.getReadOnly()].map((k) => k.toXDR("base64")));
   const toAdd = extra.filter((k) => !seen.has(k.toXDR("base64")));
   sd.setReadWrite([...rw, ...toAdd]);
-  const resourceFee = BigInt(sim.minResourceFee) + 3_000_000n; // margin for the extra trustline reads
+  // The extra footprint entries are read at execution, so the DECLARED
+  // resources (not just the fee) must cover them or the tx trips
+  // resourceLimitExceeded. Bump generously; margins are well under network max.
+  const res = sd.build().resources();
+  sd.setResources(
+    res.instructions() + 10_000_000,
+    res.diskReadBytes() + 5_000 + toAdd.length * 500,
+    res.writeBytes() + 4_000
+  );
+  const resourceFee = BigInt(sim.minResourceFee) + 8_000_000n; // margin for the extra reads + resources
   sd.setResourceFee(resourceFee);
 
   const source = await server.getAccount(keeper.publicKey());
