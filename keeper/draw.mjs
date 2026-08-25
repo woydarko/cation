@@ -28,6 +28,7 @@ import {
   contract as contractNS,
   Contract,
   TransactionBuilder,
+  Operation,
   xdr,
   Address,
   Asset,
@@ -155,12 +156,19 @@ async function revealDraw(seed) {
   const resourceFee = BigInt(sim.minResourceFee) + 8_000_000n; // margin for the extra reads + resources
   sd.setResourceFee(resourceFee);
 
+  // Re-attach the auth the simulation derived (admin.require_auth). Building the
+  // op by hand drops it, which traps reveal_draw with require_auth. admin ==
+  // keeper == source, so the tx signature authorizes these source-account
+  // credentials; we just have to carry the entries on the op.
+  const func = call().body().invokeHostFunctionOp().hostFunction();
+  const authedOp = Operation.invokeHostFunction({ func, auth: sim.result?.auth ?? [] });
+
   const source = await server.getAccount(keeper.publicKey());
   const tx = new TransactionBuilder(source, {
     fee: (resourceFee + 100_000n).toString(),
     networkPassphrase: NETWORK_PASSPHRASE,
   })
-    .addOperation(call())
+    .addOperation(authedOp)
     .setSorobanData(sd.build())
     .setTimeout(120)
     .build();
