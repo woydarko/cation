@@ -1,10 +1,13 @@
 name: cation-draw
 
-# Runs the Cation draw keeper on a schedule. The keeper no-ops until the on-chain
-# draw window is open, so running every few hours is safe for a daily interval.
+# Runs the Cation draw keeper on a schedule. The draw window is ledger-based
+# (next_draw_ledger = last draw + draw_interval), so it drifts against wall-clock
+# time and does not line up with a fixed hour. The keeper no-ops until the window
+# is open, so we run every 2 hours and it fires the draw within a couple of hours
+# of each ~daily window opening.
 on:
   schedule:
-    - cron: "0 0 * * *" # daily at 00:00 UTC
+    - cron: "0 */2 * * *" # every 2 hours
   workflow_dispatch: {} # allow manual runs
 
 jobs:
