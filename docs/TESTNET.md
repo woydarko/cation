@@ -4,15 +4,15 @@
 
 Cation uses Circle official testnet USDC (`USDC:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5`, SAC `CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA`). Users claim it themselves at https://faucet.circle.com/ . There is no internal mint.
 
-## Live addresses (Circle USDC, deployed 2026-08-22)
+## Live addresses (Circle USDC)
 | Thing | Address |
 |-------|---------|
-| PrizePool (Circle) | `CCH4D3UDFBESA7EXY7SPCZTM5CLJQGGOSO4B4XWBFSJCDUY5HRUSXKEB` |
+| PrizePool (Circle, reveal+claim) | `CA2R26QQEXNMQ6CXFINDKPKTEDUWV6E3OWSHPMEO62PSNOYR2QZ4QILW` |
 | USDC (Circle, testnet) | `CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA` |
-| Blend pool (CationCircle) | `CAVWW7H5OAG6KT5XZVAUJC5VQGUNWMQRLG5J64QU6C2GOBQFAWWXBL74` |
+| Blend pool (CationCircle, active) | `CDCCWAQCFXSJOWTYQRI4NPBVGC3NQDR3626MLOEAWLHXUECCASSW5ZPX` |
 | Admin / keeper key | alias `cation-admin` |
 
-USDC has 7 decimals; reserve index 3 in the pool. bRate > 1 (yield accrues).
+USDC has 7 decimals; reserve index 0 in the pool. bRate > 1 (yield accrues).
 
 ## Faucet: get test USDC
 
@@ -41,13 +41,17 @@ Full no-loss loop confirmed on-chain against real Blend:
 - **withdraw 40 USDC** → Blend `redeem` (burned ~399999969 bTokens) → 40 USDC
   back to the user; `balance_of` = 60 USDC. No-loss holds.
 
-### Draw (commit-reveal) — verified live
-On a short-interval instance (`draw_interval=20`,
-`CBH52SBNJSDEBLJHXPXVE4R3VGDDOOMW5M63YBKMII3W4JM7GRKGGDZD`) with two depositors:
-- `commit_draw(sha256(seed))` then `reveal_draw(seed)` — hash check passed.
-- Winner picked by ticket weight; `draw` event `{winner, amount=198, epoch=1}`.
-- Blend `redeem` pulled **only** the 198-stroop yield; both 100-USDC principals
-  stayed whole; winner's wallet rose by exactly 198. Epoch advanced.
+### Draw (commit-reveal + claim) — verified live on the live pool
+Full cycle on `CA2R26QQ…QILW` (epoch 0 → 1, 2026-08-26):
+- `commit_draw(sha256(seed))` then `reveal_draw(seed)` — hash check passed;
+  reveal redeemed the pot out of Blend and recorded the winner (no transfer).
+- `claim_prize` paid the recorded winner. `claim` event
+  `{winner=GBFX…MHXQ, amount=6164131915, epoch=0}`; the winner's USDC wallet
+  rose by exactly that pot ($616.41). Principal untouched, pot reset to 0.
+- Payout is split from reveal on purpose: the winner is chosen from
+  execution-time entropy, so it can only be in the footprint of the claim,
+  where it is already fixed in storage (see README, "Why the draw pays in two
+  steps"). Verify the draw + claim on Stellar Expert.
 
 **Keeper gotcha:** the `stellar` CLI parses an all-decimal-digit BytesN arg as a
 number (rejecting it), so a hex seed/hash needs at least one a–f digit on the
