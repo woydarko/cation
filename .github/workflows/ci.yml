@@ -1,0 +1,44 @@
+name: ci
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch: {}
+
+jobs:
+  contract:
+    name: smart contract (fmt / clippy / test / wasm build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32v1-none
+          components: rustfmt, clippy
+      - name: rustfmt
+        run: cargo fmt -p prize-pool --check
+      - name: clippy
+        run: cargo clippy -p prize-pool --all-targets
+      - name: test
+        run: cargo test -p prize-pool
+      - name: wasm build
+        run: cargo rustc -p prize-pool --release --target wasm32v1-none --crate-type cdylib
+
+  web:
+    name: frontend (install / lint / build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: install
+        run: npm install
+      - name: lint
+        run: npm run lint
+      - name: build
+        run: npm run build

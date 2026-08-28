@@ -65,7 +65,9 @@ impl PrizePool {
             epoch: 0,
         };
         env.storage().instance().set(&DataKey::Config, &cfg);
-        env.storage().instance().set(&DataKey::TotalPrincipal, &0i128);
+        env.storage()
+            .instance()
+            .set(&DataKey::TotalPrincipal, &0i128);
         env.storage()
             .instance()
             .set(&DataKey::Savers, &Vec::<Address>::new(&env));
@@ -106,11 +108,19 @@ impl PrizePool {
                 let weighted_since =
                     weighted_avg_start(&env, old.amount, old.weighted_since, amount, now);
                 let lock = core::cmp::max(old.lock_until, lock_until); // extend-only
-                Deposit { amount: new_amount, weighted_since, lock_until: lock }
+                Deposit {
+                    amount: new_amount,
+                    weighted_since,
+                    lock_until: lock,
+                }
             }
             None => {
                 Self::push_saver(&env, &from);
-                Deposit { amount, weighted_since: now, lock_until }
+                Deposit {
+                    amount,
+                    weighted_since: now,
+                    lock_until,
+                }
             }
         };
         env.storage().persistent().set(&key, &dep);
@@ -118,10 +128,14 @@ impl PrizePool {
         let total: i128 = Self::total_principal(&env)
             .checked_add(amount)
             .unwrap_or_else(|| panic_with_error!(&env, Error::Overflow));
-        env.storage().instance().set(&DataKey::TotalPrincipal, &total);
+        env.storage()
+            .instance()
+            .set(&DataKey::TotalPrincipal, &total);
 
-        env.events()
-            .publish((soroban_sdk::symbol_short!("deposit"), from), (amount, lock_until));
+        env.events().publish(
+            (soroban_sdk::symbol_short!("deposit"), from),
+            (amount, lock_until),
+        );
     }
 
     /// Withdraw principal. If the position is still locked and `force_early`
@@ -166,7 +180,9 @@ impl PrizePool {
             env.storage().persistent().set(&key, &dep);
         }
         let total = Self::total_principal(&env) - amount;
-        env.storage().instance().set(&DataKey::TotalPrincipal, &total);
+        env.storage()
+            .instance()
+            .set(&DataKey::TotalPrincipal, &total);
 
         // Redeem only the user's payout; the penalty stays supplied as yield.
         let this = env.current_contract_address();
@@ -245,7 +261,10 @@ impl PrizePool {
         cfg.admin.require_auth();
         env.storage().instance().set(
             &DataKey::PendingCommit,
-            &PendingCommit { seed_hash, commit_ledger: env.ledger().sequence() },
+            &PendingCommit {
+                seed_hash,
+                commit_ledger: env.ledger().sequence(),
+            },
         );
     }
 
@@ -268,7 +287,10 @@ impl PrizePool {
             .instance()
             .get(&DataKey::PendingCommit)
             .unwrap_or_else(|| panic_with_error!(&env, Error::NoCommit));
-        if env.crypto().sha256(&Bytes::from_array(&env, &seed.to_array())).to_bytes()
+        if env
+            .crypto()
+            .sha256(&Bytes::from_array(&env, &seed.to_array()))
+            .to_bytes()
             != commit.seed_hash
         {
             panic_with_error!(&env, Error::BadReveal);
@@ -287,7 +309,11 @@ impl PrizePool {
             blend::redeem(&env, &cfg.blend_pool, &cfg.usdc_sac, &this, prize);
             env.storage().instance().set(
                 &DataKey::PendingPrize,
-                &Prize { winner: winner.clone(), amount: prize, epoch: cfg.epoch },
+                &Prize {
+                    winner: winner.clone(),
+                    amount: prize,
+                    epoch: cfg.epoch,
+                },
             );
         }
 
@@ -374,7 +400,10 @@ impl PrizePool {
     }
 
     fn total_principal(env: &Env) -> i128 {
-        env.storage().instance().get(&DataKey::TotalPrincipal).unwrap_or(0)
+        env.storage()
+            .instance()
+            .get(&DataKey::TotalPrincipal)
+            .unwrap_or(0)
     }
 
     fn savers(env: &Env) -> Vec<Address> {

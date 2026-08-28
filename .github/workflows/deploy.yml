@@ -1,0 +1,62 @@
+name: deploy
+
+# Manual CD. Contract deploys a fresh PrizePool to Stellar testnet; web deploys
+# the Next.js app to Vercel. Both need repository secrets (see below) and are
+# never triggered automatically so a deploy is always deliberate.
+#   DEPLOYER_SECRET   S… Stellar secret to deploy + pay fees (testnet)
+#   VERCEL_TOKEN / VERCEL_ORG_ID / VERCEL_PROJECT_ID   Vercel project
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: What to deploy
+        type: choice
+        options: [web, contract, both]
+        default: web
+
+jobs:
+  deploy-contract:
+    name: deploy contract (Stellar testnet)
+    if: ${{ inputs.target == 'contract' || inputs.target == 'both' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32v1-none
+      - name: install stellar cli
+        run: cargo install --locked stellar-cli
+      - name: build + optimize wasm
+        run: |
+          cargo rustc -p prize-pool --release --target wasm32v1-none --crate-type cdylib
+          stellar contract optimize --wasm target/wasm32v1-none/release/prize_pool.wasm
+      - name: deploy to testnet
+        env:
+          DEPLOYER_SECRET: ${{ secrets.DEPLOYER_SECRET }}
+        run: |
+          printf '%s' "$DEPLOYER_SECRET" | stellar keys add ci-deployer --secret-key
+          stellar contract deploy \
+            --wasm target/wasm32v1-none/release/prize_pool.optimized.wasm \
+            --source-account ci-deployer \
+            --network testnet
+
+  deploy-web:
+    name: deploy web (Vercel)
+    if: ${{ inputs.target == 'web' || inputs.target == 'both' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: deploy to vercel
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        working-directory: web
+        run: |
+          npm install -g vercel
+          vercel pull --yes --environment=production --token "$VERCEL_TOKEN"
+          vercel build --prod --token "$VERCEL_TOKEN"
+          vercel deploy --prebuilt --prod --token "$VERCEL_TOKEN"

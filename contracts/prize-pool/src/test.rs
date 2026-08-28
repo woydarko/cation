@@ -24,9 +24,20 @@ fn setup(penalty_bps: u32, draw_interval: u32) -> Setup {
 
     let pool_addr = env.register(PrizePool, ());
     let pool = PrizePoolClient::new(&env, &pool_addr);
-    pool.initialize(&admin, &usdc_addr, &blend_pool, &draw_interval, &penalty_bps);
+    pool.initialize(
+        &admin,
+        &usdc_addr,
+        &blend_pool,
+        &draw_interval,
+        &penalty_bps,
+    );
 
-    Setup { env, pool, usdc: usdc_addr, admin }
+    Setup {
+        env,
+        pool,
+        usdc: usdc_addr,
+        admin,
+    }
 }
 
 fn mint(s: &Setup, to: &Address, amount: i128) {

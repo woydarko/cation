@@ -20,9 +20,9 @@ pub struct Config {
 #[contracttype]
 #[derive(Clone)]
 pub struct Deposit {
-    pub amount: i128,           // principal held, in USDC stroops
-    pub weighted_since: u64,    // effective start ledger for weighting
-    pub lock_until: u64,        // 0 = no lock, else ledger before which strict-locked
+    pub amount: i128,        // principal held, in USDC stroops
+    pub weighted_since: u64, // effective start ledger for weighting
+    pub lock_until: u64,     // 0 = no lock, else ledger before which strict-locked
 }
 
 /// Commit-reveal draw state. Keeper commits hash(seed) then reveals seed.
@@ -50,9 +50,9 @@ pub enum DataKey {
     Config,
     TotalPrincipal,
     Deposit(Address),
-    Savers,          // Vec<Address> iterated at draw time
+    Savers, // Vec<Address> iterated at draw time
     PendingCommit,
-    PendingPrize,    // Prize awaiting claim_prize
+    PendingPrize, // Prize awaiting claim_prize
 }
 
 #[contracterror]
@@ -64,12 +64,12 @@ pub enum Error {
     NotAdmin = 3,
     ZeroAmount = 4,
     InsufficientBalance = 5,
-    StillLocked = 6,        // strict lock, no early exit requested
-    BadLockRange = 7,       // lock outside 3d..90d
+    StillLocked = 6,  // strict lock, no early exit requested
+    BadLockRange = 7, // lock outside 3d..90d
     DrawNotReady = 8,
     NoCommit = 9,
-    BadReveal = 10,         // revealed seed does not match committed hash
+    BadReveal = 10, // revealed seed does not match committed hash
     NoSavers = 11,
     Overflow = 12,
-    PrizeUnclaimed = 13,    // a prior draw's prize must be claimed before the next draw
+    PrizeUnclaimed = 13, // a prior draw's prize must be claimed before the next draw
 }
