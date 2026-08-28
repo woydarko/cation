@@ -22,8 +22,11 @@ jobs:
         run: cargo clippy -p prize-pool --all-targets
       - name: test
         run: cargo test -p prize-pool
-      - name: wasm build
-        run: cargo rustc -p prize-pool --release --target wasm32v1-none --crate-type cdylib
+      - uses: cargo-bins/cargo-binstall@main
+      - name: install stellar cli
+        run: cargo binstall -y stellar-cli
+      - name: contract build (stellar cli)
+        run: stellar contract build
 
   web:
     name: frontend (install / lint / build)

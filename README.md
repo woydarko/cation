@@ -226,7 +226,35 @@ docs/                     Documentation
 
 config/                   Environment config
   testnet.env             Testnet addresses and parameters
+
+.github/workflows/        CI/CD (see below)
+  ci.yml                  Contract + web build/test/lint on every push
+  deploy.yml              Manual deploy to testnet + Vercel
+  draw.yml                Scheduled draw keeper
 ```
+
+## Continuous integration and deployment
+
+GitHub Actions workflows live in `.github/workflows/`:
+
+- **`ci.yml`** runs on every push and pull request, with two jobs:
+  - *smart contract*: `cargo fmt --check`, `cargo clippy`, `cargo test` (7
+    tests), plus a wasm build via `stellar contract build`.
+  - *frontend*: `npm install`, `npm run lint`, and `npm run build`.
+- **`deploy.yml`** is a manual (`workflow_dispatch`) CD pipeline that can deploy
+  the contract to Stellar testnet (`stellar contract deploy`) and/or the web app
+  to Vercel. Both are gated on repository secrets, so a deploy is always
+  deliberate and never runs on its own.
+- **`draw.yml`** runs the draw keeper on a schedule (see Keeper above).
+
+### Note on the Level 4 review
+
+An earlier submission was returned for revisions: the repo only had the keeper
+workflow, with no CI to build or test the contract and app and no deployment
+job. This was addressed by adding `ci.yml` (contract fmt/clippy/test/build and
+web install/lint/build) and `deploy.yml` (manual contract + web deploy). The
+contract was also run through `cargo fmt`, and the ESLint config was tightened
+to ignore generated bindings while keeping the lint gate meaningful.
 
 ## Testnet deployment
 
