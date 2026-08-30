@@ -12,6 +12,8 @@ there in full, and you can pull it out whenever you want.
 
 Think of it like a savings account where the bank's interest rate becomes a
 daily lottery. But unlike a lottery, nobody ever loses their deposit.
+## Analytics (Vercel)
+<img width="1253" height="592" alt="image" src="https://github.com/user-attachments/assets/0ae7c60f-e07b-487b-a83a-e525be80ab29" />
 
 ## How it works
 
