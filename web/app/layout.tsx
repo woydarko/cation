@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Space_Mono } from "next/font/google";
+import { Space_Mono, Bricolage_Grotesque, Figtree } from "next/font/google";
 import "./globals.css";
 import { WalletProvider } from "@/components/WalletProvider";
 import { ToastProvider } from "@/components/Toast";
@@ -13,6 +13,20 @@ const spaceMono = Space_Mono({
   variable: "--font-space-mono",
   subsets: ["latin"],
   weight: ["400", "700"],
+});
+
+// Display face (headings) - characterful grotesque.
+const bricolage = Bricolage_Grotesque({
+  variable: "--font-bricolage",
+  subsets: ["latin"],
+  weight: ["600", "700", "800"],
+});
+
+// Body face - clean, warm grotesque.
+const figtree = Figtree({
+  variable: "--font-figtree",
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
 });
 
 export const metadata: Metadata = {
@@ -29,7 +43,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${spaceMono.variable} h-full antialiased`}
+      className={`${spaceMono.variable} ${bricolage.variable} ${figtree.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <head>
@@ -41,11 +55,6 @@ export default function RootLayout({
             __html:
               "(function(){function x(s){return typeof s==='string'&&(s.indexOf('chrome-extension://')>-1||s.indexOf('Cannot create proxy with a non-object')>-1);}window.addEventListener('error',function(e){var st=e&&e.error&&e.error.stack;if(x(e.message)||x(e.filename)||x(st)){e.stopImmediatePropagation();e.preventDefault();}},true);window.addEventListener('unhandledrejection',function(e){var r=(e&&e.reason)||{};if(x(r.message)||x(r.stack)){e.stopImmediatePropagation();e.preventDefault();}},true);})();",
           }}
-        />
-        {/* Clash Display + General Sans - PRD-specified display/body faces. */}
-        <link
-          href="https://api.fontshare.com/v2/css?f[]=clash-display@600,700&f[]=general-sans@400,500,600&display=swap"
-          rel="stylesheet"
         />
       </head>
       <body className="min-h-full flex flex-col">

@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import PotCounter from "@/components/PotCounter";
 import Countdown from "@/components/Countdown";
@@ -238,7 +238,7 @@ function StatTile({
   loading?: boolean;
 }) {
   return (
-    <div className="card p-5">
+    <div className="card card-hover p-5">
       <p className="text-ink-60 text-sm mb-2">{label}</p>
       {loading ? (
         <Skeleton className="h-8 w-20" />
@@ -247,9 +247,52 @@ function StatTile({
           className={`tabular text-2xl sm:text-3xl font-bold ${accent ? "text-volt" : "text-ink"}`}
           style={{ fontFamily: "var(--font-data)" }}
         >
-          {value}
+          <CountUp value={value} />
         </p>
       )}
     </div>
+  );
+}
+
+/** Animate a numeric value up from zero on mount, keeping any prefix ($) and
+ * suffix (%) and the target's decimal places. Non-numeric or reduced-motion:
+ * render as-is. */
+function CountUp({ value }: { value: string }) {
+  const m = value.match(/^(\D*)(-?[\d,]*\.?\d+)(\D*)$/);
+  const target = m ? parseFloat(m[2].replace(/,/g, "")) : NaN;
+  const [n, setN] = useState(0);
+  const from = useRef(0); // animate from wherever we were, not always zero
+
+  useEffect(() => {
+    if (Number.isNaN(target)) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      from.current = target;
+      setN(target);
+      return;
+    }
+    let raf = 0;
+    const dur = 700;
+    const a = from.current;
+    const start = performance.now();
+    const tick = (t: number) => {
+      const p = Math.min((t - start) / dur, 1);
+      const eased = 1 - Math.pow(1 - p, 3); // easeOutCubic
+      const v = a + (target - a) * eased;
+      setN(v);
+      if (p < 1) raf = requestAnimationFrame(tick);
+      else from.current = target;
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target]);
+
+  if (!m || Number.isNaN(target)) return <>{value}</>;
+  const decimals = m[2].includes(".") ? m[2].split(".")[1].length : 0;
+  return (
+    <>
+      {m[1]}
+      {n.toFixed(decimals)}
+      {m[3]}
+    </>
   );
 }

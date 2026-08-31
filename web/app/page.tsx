@@ -2,6 +2,7 @@ import WaveBackground from "@/components/WaveBackground";
 import InfoCard from "@/components/InfoCard";
 import Footer from "@/components/Footer";
 import ConnectCta from "@/components/ConnectCta";
+import Reveal from "@/components/Reveal";
 
 export default function Landing() {
   return (
@@ -69,9 +70,9 @@ export default function Landing() {
               Three steps, no jargon.
             </h2>
             <div className="grid gap-5 md:grid-cols-3 items-stretch">
-              <InfoCard badge="1" accent="var(--volt)" title="Deposit USDC" body="Add any amount and get tickets. Your money goes to work on Blend and stays yours." />
-              <InfoCard badge="2" accent="var(--zap)" title="Earn together" body="Everyone's interest piles into one prize. The more you save and the longer you keep it in, the better your odds." />
-              <InfoCard badge="3" accent="var(--coral)" title="Win the pot" body="Every day one winner takes the interest. Did not win? Your money has not moved." />
+              <Reveal delay={0} className="h-full"><InfoCard badge="1" accent="var(--volt)" title="Deposit USDC" body="Add any amount and get tickets. Your money goes to work on Blend and stays yours." /></Reveal>
+              <Reveal delay={100} className="h-full"><InfoCard badge="2" accent="var(--zap)" title="Earn together" body="Everyone's interest piles into one prize. The more you save and the longer you keep it in, the better your odds." /></Reveal>
+              <Reveal delay={200} className="h-full"><InfoCard badge="3" accent="var(--coral)" title="Win the pot" body="Every day one winner takes the interest. Did not win? Your money has not moved." /></Reveal>
             </div>
           </section>
 
@@ -81,9 +82,9 @@ export default function Landing() {
               Built to be safe and open.
             </h2>
             <div className="grid gap-5 sm:grid-cols-3 items-stretch">
-              <InfoCard badge="&darr;" accent="var(--mint)" title="No-loss by design" body="You only ever risk the interest, never the money you put in." />
-              <InfoCard badge="&#8635;" accent="var(--volt)" title="Withdraw anytime" body="Take your money out whenever you want, unless you locked it." />
-              <InfoCard badge="&#10003;" accent="var(--coral)" title="Verifiable draws" body="Odds and winners are on-chain. Check the math, do not take our word." />
+              <Reveal delay={0} className="h-full"><InfoCard badge="&darr;" accent="var(--mint)" title="No-loss by design" body="You only ever risk the interest, never the money you put in." /></Reveal>
+              <Reveal delay={100} className="h-full"><InfoCard badge="&#8635;" accent="var(--volt)" title="Withdraw anytime" body="Take your money out whenever you want, unless you locked it." /></Reveal>
+              <Reveal delay={200} className="h-full"><InfoCard badge="&#10003;" accent="var(--coral)" title="Verifiable draws" body="Odds and winners are on-chain. Check the math, do not take our word." /></Reveal>
             </div>
           </section>
 
