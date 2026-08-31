@@ -258,6 +258,21 @@ web install/lint/build) and `deploy.yml` (manual contract + web deploy). The
 contract was also run through `cargo fmt`, and the ESLint config was tightened
 to ignore generated bindings while keeping the lint gate meaningful.
 
+### UI revamp (post-review)
+
+The "work more on UI" feedback drove a frontend redesign:
+
+- **Typography** — self-hosted Nexa (Heavy for display, ExtraLight for body)
+  via `next/font/local`; Space Mono kept for figures.
+- **Landing** — left-aligned hero over a `bg.png` violet artwork with a
+  hand/phone mockup that rotates in on load; scroll-reveal throughout.
+- **Feature cards** — reference-style cards (accent icon, tag, title, and a
+  decorative SVG motif per card in `CardDecor`) replacing the old grid.
+- **Dashboard** — reworked into a two-column layout: welcome, live pot,
+  a progress stepper, action tiles, animated stat tiles, and a help card.
+- **Housekeeping** — dropped the three.js wave background (and its deps) for
+  a lighter CSS/asset hero.
+
 ## Testnet deployment
 
 The contract is live on Stellar testnet (Circle USDC, active Blend pool):

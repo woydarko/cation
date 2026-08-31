@@ -24,8 +24,8 @@
   --color-coral: var(--coral);
   --color-mint: var(--mint);
 
-  --font-display: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
-  --font-body: var(--font-figtree), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-nexa-heavy), ui-sans-serif, system-ui, sans-serif;
+  --font-body: var(--font-nexa-light), ui-sans-serif, system-ui, sans-serif;
   --font-data: var(--font-space-mono), ui-monospace, monospace;
 
   --radius-card: 1rem;
@@ -55,26 +55,10 @@ body {
 }
 .card-hover:hover {
   transform: translateY(-4px);
-  border-color: color-mix(in srgb, var(--volt) 40%, var(--ink-12));
+  border-color: color-mix(in srgb, var(--accent, var(--volt)) 38%, var(--ink-12));
   box-shadow: 0 20px 40px -16px color-mix(in srgb, var(--ink) 36%, transparent);
 }
-/* Accent bar along the top edge; set --accent per card. */
-.card-accent {
-  position: relative;
-  overflow: hidden;
-}
-.card-accent::before {
-  content: "";
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 4px;
-  background: var(--accent, var(--volt));
-  transition: height 0.18s ease;
-}
-/* Micro-interactions: fatten the accent bar, nudge the index up on hover. */
-.card-accent.card-hover:hover::before {
-  height: 7px;
-}
+/* Nudge the index chip up on hover. */
 .card-index {
   transition: transform 0.18s ease;
 }
@@ -127,16 +111,13 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* Marker-pen highlight behind a word: lime swipe under the text baseline. */
-.mark-zap {
-  background: linear-gradient(
-    transparent 58%,
-    color-mix(in srgb, var(--zap) 85%, transparent) 58%
-  );
-  padding: 0 0.08em;
-  border-radius: 0.1em;
-  box-decoration-break: clone;
-  -webkit-box-decoration-break: clone;
+/* Small editorial section label: uppercase, tracked, muted. */
+.eyebrow {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-60);
 }
 
 /* CTA band: violet gradient + soft brand glows + dot texture for depth. */
@@ -166,7 +147,7 @@ body {
 .cta-glow-zap {
   top: -180px;
   left: -120px;
-  background: var(--zap);
+  background: var(--mint);
   animation: cta-float 9s ease-in-out infinite;
 }
 .cta-glow-coral {
@@ -186,9 +167,9 @@ body {
 /* Scroll reveal: fade + slide-up, driven by Reveal.tsx toggling .in */
 .reveal {
   opacity: 0;
-  transform: translateY(18px);
-  transition: opacity 0.55s cubic-bezier(0.22, 1, 0.36, 1),
-    transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+  transform: translateY(32px) scale(0.97);
+  transition: opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
   will-change: opacity, transform;
 }
 .reveal.in {
@@ -209,6 +190,21 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .reveal { opacity: 1; transform: none; transition: none; }
   .countdown-urgent { animation: none; }
+}
+
+/* Hand + phone swings in from the right frame on load, then rests.
+   Pivots near its lower-right so it rotates in like an arm reaching up. */
+@keyframes hand-in {
+  0% { opacity: 0; transform: translateX(28%) rotate(34deg); }
+  55% { opacity: 1; }
+  100% { opacity: 1; transform: translateX(0) rotate(0deg); }
+}
+.hand-enter {
+  transform-origin: 85% 90%;
+  animation: hand-in 1.2s cubic-bezier(0.2, 0.8, 0.25, 1) 0.15s both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .hand-enter { animation: none; }
 }
 
 @keyframes spark {

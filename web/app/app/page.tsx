@@ -88,124 +88,199 @@ export default function Dashboard() {
   const usdc = state?.user?.usdcBalance ?? "0";
   const odds = state?.user ? oddsPct(state.user.tickets, state.totalTickets) : "0";
   const hasDeposit = BigInt(bal) > 0n;
+  const hasUsdc = BigInt(usdc) > 0n;
   const wins = draws.filter((d) => d.winner === address).length;
+  const short = `${address.slice(0, 4)}…${address.slice(-4)}`;
 
   return (
-    <main className="flex-1 max-w-5xl mx-auto w-full px-6 py-10">
-      <h1 className="text-3xl font-bold mb-6" style={{ fontFamily: "var(--font-display)" }}>
-        Dashboard
-      </h1>
+    <main className="flex-1 max-w-6xl mx-auto w-full px-6 py-8">
+      <div className="grid lg:grid-cols-3 gap-6">
+        {/* ===== Main column ===== */}
+        <div className="lg:col-span-2 flex flex-col gap-6">
+          {/* Welcome */}
+          <div className="card p-6 sm:p-8 flex items-center gap-5">
+            <div className="hidden sm:grid shrink-0 w-16 h-16 rounded-2xl place-items-center text-3xl bg-volt-12">
+              👋
+            </div>
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold" style={{ fontFamily: "var(--font-display)" }}>
+                Welcome back
+              </h1>
+              <p className="text-ink-60 mt-1">
+                {hasDeposit
+                  ? "You're in today's draw. Good luck at 00:00 UTC."
+                  : "Deposit USDC to get tickets and join today's draw."}
+              </p>
+            </div>
+          </div>
 
-      <div className="grid gap-5 lg:grid-cols-3">
-        {/* Pot (its own card, no countdown) */}
-        <div className="card p-8 lg:col-span-2 flex flex-col justify-center min-h-[220px]">
-          <p className="text-ink-60 text-xs font-semibold uppercase tracking-wide mb-4">
-            Prize pot · epoch {state?.epoch ?? "…"}
-          </p>
-          {state ? (
-            <PotCounter potStroops={state.pot} size="hero" align="left" />
-          ) : (
-            <Skeleton className="h-16 w-64" />
-          )}
-        </div>
+          {/* Prize pot hero */}
+          <div className="card p-6 sm:p-8">
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-ink-60 text-xs font-semibold uppercase tracking-wide">
+                Prize pot · epoch {state?.epoch ?? "…"}
+              </p>
+              <span className="inline-flex items-center gap-2 rounded-full bg-cloud px-3 py-1 text-sm font-semibold">
+                <span className="w-2 h-2 rounded-full bg-mint animate-pulse" aria-hidden />
+                {state ? <Countdown initialSeconds={secs} label="" bare /> : "…"}
+              </span>
+            </div>
+            {state ? (
+              <PotCounter potStroops={state.pot} size="app" align="left" />
+            ) : (
+              <Skeleton className="h-14 w-64" />
+            )}
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Link href="/app/manage?tab=deposit" className="btn btn-primary px-6 py-3 text-base">
+                Deposit USDC
+              </Link>
+              <Link
+                href="/app/manage?tab=withdraw"
+                className={`btn px-6 py-3 text-base border-2 border-ink-12 text-ink ${
+                  hasDeposit ? "hover:border-volt" : "opacity-40 pointer-events-none"
+                }`}
+              >
+                Withdraw
+              </Link>
+            </div>
+          </div>
 
-        {/* Next draw (separate card) */}
-        <div className="card p-6 lg:col-span-1 flex flex-col items-center justify-center text-center min-h-[220px]">
-          <p className="text-ink-60 text-xs font-semibold uppercase tracking-wide mb-3">
-            Next draw
-          </p>
-          {state ? (
-            <p className="tabular text-3xl font-bold text-ink" style={{ fontFamily: "var(--font-data)" }}>
-              <CountdownBig initialSeconds={secs} />
-            </p>
-          ) : (
-            <Skeleton className="h-9 w-28" />
-          )}
-          <p className="text-ink-60 text-sm mt-2">Daily at 00:00 UTC</p>
-        </div>
-
-        {/* Stat tiles */}
-        <div className="lg:col-span-3 grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <StatTile label="Your balance" value={`$${formatUsdc(bal)}`} loading={!state} />
-          <StatTile label="Wallet USDC" value={`$${formatUsdc(usdc)}`} loading={!state} />
-          <StatTile label="Your odds" value={hasDeposit ? `${odds}%` : "0%"} accent loading={!state} />
-          <StatTile label="Times won" value={String(wins)} loading={!state} />
-        </div>
-
-        {/* Actions */}
-        <div className="card p-5 lg:col-span-3 flex flex-col sm:flex-row gap-3">
-          <Link href="/app/manage?tab=deposit" className="btn btn-primary py-3.5 text-base text-center flex-1">
-            Deposit
-          </Link>
-          <Link
-            href="/app/manage?tab=withdraw"
-            className={`btn py-3.5 text-base text-center flex-1 border-2 border-ink-12 text-ink ${
-              hasDeposit ? "" : "opacity-40 pointer-events-none"
-            }`}
-          >
-            Withdraw
-          </Link>
-          <button
-            onClick={claim}
-            disabled={fauceting}
-            className="btn py-3.5 text-base flex-1 border-2 border-ink-12 text-ink-60 disabled:opacity-50"
-          >
-            {fauceting ? "Preparing…" : "Get test USDC"}
-          </button>
-        </div>
-
-        {/* Recent draws */}
-        <div className="card p-6 lg:col-span-3">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-bold text-lg" style={{ fontFamily: "var(--font-display)" }}>
-              Recent draws
+          {/* Setup steps */}
+          <div className="card p-6 sm:p-8">
+            <h2 className="font-bold text-lg mb-6" style={{ fontFamily: "var(--font-display)" }}>
+              Get set up
             </h2>
-            <Link href="/app/history" className="text-volt font-semibold text-sm hover:underline">
-              View all
+            <ol className="flex flex-col sm:flex-row sm:items-start gap-4 sm:gap-2">
+              <SetupStep n={1} label="Connect wallet" done detail={short} />
+              <StepLine done={hasUsdc} />
+              <SetupStep n={2} label="Get USDC" done={hasUsdc} active={!hasUsdc}
+                detail={hasUsdc ? `$${formatUsdc(usdc)} ready` : "Grab testnet USDC"} />
+              <StepLine done={hasDeposit} />
+              <SetupStep n={3} label="Deposit & join" done={hasDeposit} active={hasUsdc && !hasDeposit}
+                detail={hasDeposit ? "You're in the draw" : "Add to the pool"} />
+            </ol>
+          </div>
+
+          {/* Quick actions */}
+          <div className="grid sm:grid-cols-2 gap-4">
+            <ActionTile
+              icon="＋"
+              accent="var(--volt)"
+              title="Deposit"
+              desc="Add USDC and get tickets for the draw."
+              href="/app/manage?tab=deposit"
+            />
+            <ActionTile
+              icon="↺"
+              accent="var(--mint)"
+              title="Withdraw"
+              desc="Take your principal out anytime."
+              href={hasDeposit ? "/app/manage?tab=withdraw" : undefined}
+            />
+            <ActionTile
+              icon="🪙"
+              accent="var(--coral)"
+              title={fauceting ? "Preparing…" : "Get test USDC"}
+              desc="Set up a trustline and claim from the faucet."
+              onClick={claim}
+              disabled={fauceting}
+            />
+            <ActionTile
+              icon="🏆"
+              accent="var(--volt)"
+              title="Draw history"
+              desc="See every past winner and payout on-chain."
+              href="/app/history"
+            />
+          </div>
+
+          {/* Recent draws */}
+          <div className="card p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-bold text-lg" style={{ fontFamily: "var(--font-display)" }}>
+                Recent draws
+              </h2>
+              <Link href="/app/history" className="text-volt font-semibold text-sm hover:underline">
+                View all
+              </Link>
+            </div>
+            {draws.length === 0 ? (
+              <p className="text-ink-60">No draws yet. The first winner shows up here soon.</p>
+            ) : (
+              <ul className="divide-y-2 divide-ink-12">
+                {draws.slice(0, 4).map((d) => {
+                  const mine = d.winner === address;
+                  return (
+                    <li key={d.epoch} className="flex items-center justify-between py-3">
+                      <div className="flex items-center gap-3">
+                        <span className="font-semibold">Draw #{d.epoch}</span>
+                        {mine && (
+                          <span className="text-xs font-semibold rounded-full bg-mint/25 text-ink px-2 py-0.5">
+                            You won
+                          </span>
+                        )}
+                        <span className="tabular text-ink-60 text-sm">
+                          {d.winner.slice(0, 4)}…{d.winner.slice(-4)}
+                        </span>
+                      </div>
+                      <span className="tabular font-bold text-volt" style={{ fontFamily: "var(--font-data)" }}>
+                        ${formatUsdc(d.amount, 7)}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        </div>
+
+        {/* ===== Right column ===== */}
+        <div className="flex flex-col gap-6">
+          {/* Stats */}
+          <div className="grid grid-cols-2 gap-4">
+            <StatTile wide label="Your balance" value={`$${formatUsdc(bal)}`} loading={!state} />
+            <StatTile wide label="Wallet USDC" value={`$${formatUsdc(usdc)}`} loading={!state} />
+            <StatTile label="Your odds" value={hasDeposit ? `${odds}%` : "0%"} accent loading={!state} />
+            <StatTile label="Times won" value={String(wins)} loading={!state} />
+          </div>
+
+          {/* Help card (violet) */}
+          <div className="rounded-[var(--radius-card)] p-6 text-white relative overflow-hidden"
+               style={{ background: "linear-gradient(135deg, #8163ff 0%, #6c4cf1 55%, #4a2fd0 100%)" }}>
+            <div className="w-11 h-11 rounded-xl bg-white/15 grid place-items-center text-xl mb-4">?</div>
+            <h3 className="text-xl font-bold mb-1" style={{ fontFamily: "var(--font-display)" }}>
+              Tried it? Tell us.
+            </h3>
+            <p className="text-white/85 text-sm mb-5">
+              Found something broken or confusing? Two minutes of feedback enters a
+              monthly $USDG raffle.
+            </p>
+            <a
+              href={FEEDBACK_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn inline-flex bg-white text-volt px-5 py-2.5 text-sm font-semibold"
+            >
+              Give feedback →
+            </a>
+          </div>
+
+          {/* How draws work */}
+          <div className="card p-6">
+            <h3 className="font-bold mb-3" style={{ fontFamily: "var(--font-display)" }}>
+              How the draw works
+            </h3>
+            <ul className="text-ink-60 text-sm space-y-2">
+              <li className="flex gap-2"><span className="text-volt font-bold">·</span> Every deposit earns tickets.</li>
+              <li className="flex gap-2"><span className="text-volt font-bold">·</span> All the pooled interest becomes one prize.</li>
+              <li className="flex gap-2"><span className="text-volt font-bold">·</span> One winner is drawn daily at 00:00 UTC.</li>
+              <li className="flex gap-2"><span className="text-volt font-bold">·</span> Your principal never moves — withdraw anytime.</li>
+            </ul>
+            <Link href="/how-it-works" className="text-volt font-semibold text-sm hover:underline inline-block mt-4">
+              Learn more →
             </Link>
           </div>
-          {draws.length === 0 ? (
-            <p className="text-ink-60">No draws yet. The first winner shows up here soon.</p>
-          ) : (
-            <ul className="divide-y-2 divide-ink-12">
-              {draws.slice(0, 4).map((d) => {
-                const mine = d.winner === address;
-                return (
-                  <li key={d.epoch} className="flex items-center justify-between py-3">
-                    <div className="flex items-center gap-3">
-                      <span className="font-semibold">Draw #{d.epoch}</span>
-                      {mine && (
-                        <span className="text-xs font-semibold rounded-full bg-zap/25 text-ink px-2 py-0.5">
-                          You won
-                        </span>
-                      )}
-                      <span className="tabular text-ink-60 text-sm">
-                        {d.winner.slice(0, 4)}…{d.winner.slice(-4)}
-                      </span>
-                    </div>
-                    <span className="tabular font-bold text-volt" style={{ fontFamily: "var(--font-data)" }}>
-                      ${formatUsdc(d.amount, 7)}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
         </div>
-
-        {/* Feedback nudge — engaged users make the best critics */}
-        <a
-          href={FEEDBACK_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="card mt-6 flex items-center justify-between p-5 hover:border-volt transition-colors"
-        >
-          <span className="text-sm">
-            <span className="font-semibold">Tried it? Tell us what&apos;s broken.</span>{" "}
-            <span className="text-ink-60">Anonymous, 3 min, enters a monthly $USDG raffle.</span>
-          </span>
-          <span className="text-volt font-semibold text-sm shrink-0 ml-4">Give feedback →</span>
-        </a>
       </div>
 
       {win && (
@@ -222,29 +297,122 @@ export default function Dashboard() {
   );
 }
 
-function CountdownBig({ initialSeconds }: { initialSeconds: number }) {
-  return <Countdown initialSeconds={initialSeconds} label="" bare />;
+/* ---------- pieces ---------- */
+
+function SetupStep({
+  n,
+  label,
+  detail,
+  done,
+  active,
+}: {
+  n: number;
+  label: string;
+  detail?: string;
+  done?: boolean;
+  active?: boolean;
+}) {
+  return (
+    <li className="flex sm:flex-col items-center sm:text-center gap-3 sm:gap-2 flex-1">
+      <span
+        className={`shrink-0 w-10 h-10 rounded-full grid place-items-center font-bold tabular transition-colors ${
+          done
+            ? "bg-mint text-ink"
+            : active
+            ? "bg-volt text-white"
+            : "bg-cloud text-ink-60 border-2 border-ink-12"
+        }`}
+      >
+        {done ? "✓" : n}
+      </span>
+      <div className="sm:mt-1">
+        <p className={`font-semibold ${active ? "text-volt" : done ? "text-ink" : "text-ink-60"}`}>{label}</p>
+        {detail && <p className="text-ink-60 text-xs mt-0.5">{detail}</p>}
+      </div>
+    </li>
+  );
 }
 
+function StepLine({ done }: { done?: boolean }) {
+  return (
+    <span
+      className={`hidden sm:block flex-1 h-0.5 mt-5 rounded ${done ? "bg-mint" : "bg-ink-12"}`}
+      aria-hidden
+    />
+  );
+}
+
+function ActionTile({
+  icon,
+  accent,
+  title,
+  desc,
+  href,
+  onClick,
+  disabled,
+}: {
+  icon: React.ReactNode;
+  accent: string;
+  title: string;
+  desc: string;
+  href?: string;
+  onClick?: () => void;
+  disabled?: boolean;
+}) {
+  const inner = (
+    <>
+      <div
+        className="card-index shrink-0 w-11 h-11 rounded-xl grid place-items-center text-lg font-bold"
+        style={{
+          color: accent,
+          background: `linear-gradient(135deg, color-mix(in srgb, ${accent} 22%, #fff), color-mix(in srgb, ${accent} 8%, #fff))`,
+        }}
+      >
+        {icon}
+      </div>
+      <div className="text-left">
+        <p className="font-bold" style={{ fontFamily: "var(--font-display)" }}>{title}</p>
+        <p className="text-ink-60 text-sm mt-0.5">{desc}</p>
+      </div>
+    </>
+  );
+  const cls = "card card-hover p-5 flex items-start gap-4 w-full text-left";
+  if (href) return <Link href={href} className={cls} style={{ ["--accent" as string]: accent }}>{inner}</Link>;
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={`${cls} disabled:opacity-60`}
+      style={{ ["--accent" as string]: accent }}
+    >
+      {inner}
+    </button>
+  );
+}
+
+/** Small stat card with an animated count-up value. */
 function StatTile({
   label,
   value,
   accent,
   loading,
+  wide,
 }: {
   label: string;
   value: string;
   accent?: boolean;
   loading?: boolean;
+  wide?: boolean;
 }) {
   return (
-    <div className="card card-hover p-5">
-      <p className="text-ink-60 text-sm mb-2">{label}</p>
+    <div className={`card card-hover p-5 min-w-0 ${wide ? "col-span-2" : ""}`}>
+      <p className="text-ink-60 text-sm mb-2 truncate">{label}</p>
       {loading ? (
         <Skeleton className="h-8 w-20" />
       ) : (
         <p
-          className={`tabular text-2xl sm:text-3xl font-bold ${accent ? "text-volt" : "text-ink"}`}
+          title={value}
+          className={`tabular text-xl sm:text-2xl font-bold leading-tight truncate ${accent ? "text-volt" : "text-ink"}`}
           style={{ fontFamily: "var(--font-data)" }}
         >
           <CountUp value={value} />
@@ -254,14 +422,13 @@ function StatTile({
   );
 }
 
-/** Animate a numeric value up from zero on mount, keeping any prefix ($) and
- * suffix (%) and the target's decimal places. Non-numeric or reduced-motion:
- * render as-is. */
+/** Animate a numeric value up from its previous value, keeping any prefix ($)
+ * and suffix (%) and the target's decimal places. */
 function CountUp({ value }: { value: string }) {
   const m = value.match(/^(\D*)(-?[\d,]*\.?\d+)(\D*)$/);
   const target = m ? parseFloat(m[2].replace(/,/g, "")) : NaN;
   const [n, setN] = useState(0);
-  const from = useRef(0); // animate from wherever we were, not always zero
+  const from = useRef(0);
 
   useEffect(() => {
     if (Number.isNaN(target)) return;
@@ -276,9 +443,8 @@ function CountUp({ value }: { value: string }) {
     const start = performance.now();
     const tick = (t: number) => {
       const p = Math.min((t - start) / dur, 1);
-      const eased = 1 - Math.pow(1 - p, 3); // easeOutCubic
-      const v = a + (target - a) * eased;
-      setN(v);
+      const eased = 1 - Math.pow(1 - p, 3);
+      setN(a + (target - a) * eased);
       if (p < 1) raf = requestAnimationFrame(tick);
       else from.current = target;
     };
@@ -288,10 +454,14 @@ function CountUp({ value }: { value: string }) {
 
   if (!m || Number.isNaN(target)) return <>{value}</>;
   const decimals = m[2].includes(".") ? m[2].split(".")[1].length : 0;
+  const num = n.toLocaleString("en-US", {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  });
   return (
     <>
       {m[1]}
-      {n.toFixed(decimals)}
+      {num}
       {m[3]}
     </>
   );

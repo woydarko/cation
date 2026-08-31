@@ -8,6 +8,7 @@ import { useWallet } from "./WalletProvider";
 export default function Navbar() {
   const { address, connect, disconnect } = useWallet();
   const [menu, setMenu] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -18,10 +19,28 @@ export default function Navbar() {
     return () => window.removeEventListener("mousedown", onClick);
   }, []);
 
+  // Transparent at the very top so the hero background shows full-bleed;
+  // solid once scrolled so content never bleeds through the fixed header.
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   return (
     <>
-      <header className="fixed top-0 inset-x-0 z-40 backdrop-blur-md bg-cloud/80 border-b-2 border-ink-12">
-        <div className="max-w-5xl mx-auto w-full px-6 py-3 flex items-center justify-between gap-4">
+      <header
+        className={`fixed top-0 inset-x-0 z-40 transition-all duration-300 border-b-2 ${
+          scrolled ? "backdrop-blur-md border-ink-12" : "border-transparent"
+        }`}
+        style={{
+          backgroundColor: scrolled
+            ? "color-mix(in srgb, var(--cloud) 85%, transparent)"
+            : "transparent",
+        }}
+      >
+        <div className="max-w-7xl mx-auto w-full px-6 py-3 flex items-center justify-between gap-4">
         {/* Left: logo */}
         <Wordmark />
 

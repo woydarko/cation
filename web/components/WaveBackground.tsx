@@ -1,16 +1,21 @@
-"use client";
-import dynamic from "next/dynamic";
-
-const WaveField = dynamic(() => import("./WaveField"), { ssr: false });
-
-/** Fixed, full-viewport interactive wave. R3F sizes a fixed canvas correctly
- * (100vw/vh). It's kept behind everything (z-0) and low opacity; the content
- * below the hero uses a solid background so the wave only shows behind the
- * hero. Click-through; the wave tracks the mouse on the window. */
+/** Hero background: the designed violet artwork (public/bg.png). Fixed and
+ * click-through, masked so it fades into the solid page below. The image
+ * carries the composition (soft violet arcs on the right, clean space on the
+ * left for the left-aligned hero copy). */
 export default function WaveBackground() {
+  const fade = "linear-gradient(to bottom, #000 55%, transparent 92%)";
   return (
-    <div className="fixed inset-0 z-0 pointer-events-none opacity-55" aria-hidden>
-      <WaveField />
-    </div>
+    <div
+      className="fixed inset-0 z-0 pointer-events-none"
+      style={{
+        backgroundImage: "url('/bg.png')",
+        backgroundSize: "cover",
+        backgroundPosition: "top right",
+        backgroundRepeat: "no-repeat",
+        WebkitMaskImage: fade,
+        maskImage: fade,
+      }}
+      aria-hidden
+    />
   );
 }

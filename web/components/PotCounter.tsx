@@ -65,9 +65,9 @@ export default function PotCounter({
         {digits}
       </span>
       <span
-        className="spark text-zap text-3xl sm:text-4xl -ml-1 mt-1 select-none"
+        className="spark text-volt text-3xl sm:text-4xl -ml-1 mt-1 select-none"
         aria-hidden
-        style={{ textShadow: "0 0 12px color-mix(in srgb, var(--zap) 60%, transparent)" }}
+        style={{ textShadow: "0 0 12px color-mix(in srgb, var(--volt) 45%, transparent)" }}
       >
         +
       </span>

@@ -1,5 +1,5 @@
 import WaveBackground from "@/components/WaveBackground";
-import InfoCard from "@/components/InfoCard";
+import StepRow from "@/components/StepRow";
 import Footer from "@/components/Footer";
 import ConnectCta from "@/components/ConnectCta";
 import Reveal from "@/components/Reveal";
@@ -9,47 +9,47 @@ export default function Landing() {
     <>
       <WaveBackground />
       <main className="flex-1 relative z-10">
-        {/* Hero (centered, tall) */}
-        <section className="relative z-10 min-h-[86vh] max-w-3xl mx-auto w-full px-6 pt-10 pb-20 text-center flex flex-col items-center justify-center">
+        {/* Hand + phone mockup, right side of the hero. Rotates in from the
+            right frame on load (hand-enter). Desktop only; below xl the hero
+            is text-only so the copy never collides with it. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/tangan.png"
+          alt="A hand holding a phone showing a Cation win notification"
+          className="hand-enter hidden xl:block absolute right-0 top-[4vh] w-[52vw] max-w-[860px] pointer-events-none select-none z-10"
+          style={{
+            // Fade the lower forearm into nothing so the cropped edge of the
+            // PNG never shows as a hard cut.
+            WebkitMaskImage: "linear-gradient(to bottom, #000 62%, transparent 88%)",
+            maskImage: "linear-gradient(to bottom, #000 62%, transparent 88%)",
+          }}
+        />
+        {/* Hero (left-aligned, tall) */}
+        <section className="relative z-10 min-h-[86vh] max-w-7xl mx-auto w-full px-6 pt-10 pb-20 text-left flex flex-col items-start justify-center">
           <Reveal delay={0}>
-            <span className="inline-flex items-center gap-2 rounded-full border-[1.5px] border-ink-12 bg-white/70 backdrop-blur px-4 py-1.5 text-sm font-semibold text-ink-60 mb-6">
-              <span className="spark text-volt">✦</span>
-              No-loss savings · daily prize on Stellar
-            </span>
-          </Reveal>
-          <Reveal delay={90}>
             <h1
               className="text-5xl sm:text-6xl md:text-7xl font-extrabold tracking-[-0.03em] leading-[1.02] mb-5"
               style={{ fontFamily: "var(--font-display)" }}
             >
               Save money.
               <br />
-              Win the <span className="mark-zap">interest</span>.
+              Win the interest.
               <br />
               <span className="text-volt">Never lose a cent.</span>
             </h1>
           </Reveal>
-          <Reveal delay={170}>
+          <Reveal delay={120}>
             <p className="text-lg text-ink-60 max-w-lg mb-8">
               Cation pools everyone&apos;s interest into a daily prize on Stellar.
               Your deposit stays yours, always.
             </p>
           </Reveal>
-          <Reveal delay={250}>
-            <div className="flex flex-wrap items-center justify-center gap-3">
+          <Reveal delay={200}>
+            <div className="flex flex-wrap items-center justify-start gap-3">
               <ConnectCta variant="primary">Start saving</ConnectCta>
               <a href="/how-it-works" className="btn inline-flex px-6 py-4 text-lg bg-white border-2 border-ink-12 text-ink shadow-[var(--shadow-lift)] hover:border-volt hover:shadow-md transition-colors">
                 See how
               </a>
-            </div>
-          </Reveal>
-          <Reveal delay={330}>
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-2 text-sm font-semibold text-ink-60">
-              {["Your deposit stays yours", "Withdraw anytime", "On-chain, verifiable"].map((c) => (
-                <span key={c} className="rounded-full bg-white border-[1.5px] border-ink-12 px-3 py-1">
-                  {c}
-                </span>
-              ))}
             </div>
           </Reveal>
         </section>
@@ -62,7 +62,7 @@ export default function Landing() {
         <div className="relative z-10 bg-cloud">
           {/* About (centered) */}
           <section className="max-w-3xl mx-auto w-full px-6 py-20 text-center">
-            <p className="text-volt font-semibold mb-3">The idea</p>
+            <p className="eyebrow mb-4">— The idea</p>
             <h2
               className="text-3xl sm:text-4xl font-bold leading-tight mb-6"
               style={{ fontFamily: "var(--font-display)" }}
@@ -84,29 +84,42 @@ export default function Landing() {
             </div>
           </section>
 
-          {/* How it works (centered, unified cards) */}
-          <section id="how" className="max-w-5xl mx-auto w-full px-6 py-16 text-center">
-            <p className="text-volt font-semibold mb-3">How it works</p>
-            <h2 className="text-3xl sm:text-4xl font-bold mb-10" style={{ fontFamily: "var(--font-display)" }}>
-              Three steps, no jargon.
-            </h2>
-            <div className="grid gap-5 md:grid-cols-3 items-stretch">
-              <Reveal delay={0} className="h-full"><InfoCard badge="1" accent="var(--volt)" title="Deposit USDC" body="Add any amount and get tickets. Your money goes to work on Blend and stays yours." /></Reveal>
-              <Reveal delay={100} className="h-full"><InfoCard badge="2" accent="var(--zap)" title="Earn together" body="Everyone's interest piles into one prize. The more you save and the longer you keep it in, the better your odds." /></Reveal>
-              <Reveal delay={200} className="h-full"><InfoCard badge="3" accent="var(--coral)" title="Win the pot" body="Every day one winner takes the interest. Did not win? Your money has not moved." /></Reveal>
+          {/* How it works — reference-style feature cards */}
+          <section id="how" className="max-w-6xl mx-auto w-full px-6 py-16">
+            <div className="text-center mb-12">
+              <p className="eyebrow mb-4">— How it works</p>
+              <h2 className="text-3xl sm:text-4xl font-bold" style={{ fontFamily: "var(--font-display)" }}>
+                Three steps, no jargon.
+              </h2>
+            </div>
+            <div className="grid md:grid-cols-3 gap-5 items-stretch">
+              <StepRow delay={0} decor="waves" icon="＋" accent="var(--volt)" tag="Step 01" label="Get in"
+                title="Deposit USDC" body="Add any amount and get tickets. Your money works on Blend and stays yours." />
+              <StepRow delay={100} decor="dots" icon="↑" accent="var(--mint)" tag="Step 02" label="Grow"
+                title="Earn together" body="Everyone's interest piles into one prize. Save more, keep it longer, better odds." />
+              <StepRow delay={200} decor="chevron" icon="★" accent="var(--coral)" tag="Step 03" label="Payout"
+                title="Win the pot" body="One winner takes the interest daily. Didn't win? Your money hasn't moved." />
             </div>
           </section>
 
-          {/* Assurances (centered, same card) */}
-          <section className="max-w-5xl mx-auto w-full px-6 py-16 text-center">
-            <h2 className="text-3xl sm:text-4xl font-bold mb-10" style={{ fontFamily: "var(--font-display)" }}>
-              Built to be safe and open.
-            </h2>
-            <div className="grid gap-5 sm:grid-cols-3 items-stretch">
-              <Reveal delay={0} className="h-full"><InfoCard badge="&darr;" accent="var(--mint)" title="No-loss by design" body="You only ever risk the interest, never the money you put in." /></Reveal>
-              <Reveal delay={100} className="h-full"><InfoCard badge="&#8635;" accent="var(--volt)" title="Withdraw anytime" body="Take your money out whenever you want, unless you locked it." /></Reveal>
-              <Reveal delay={200} className="h-full"><InfoCard badge="&#10003;" accent="var(--coral)" title="Verifiable draws" body="Odds and winners are on-chain. Check the math, do not take our word." /></Reveal>
+          {/* Assurances — full-bleed lavender block, reference-style cards */}
+          <section style={{ background: "color-mix(in srgb, var(--volt) 12%, #fff)" }}>
+           <div className="max-w-6xl mx-auto w-full px-6 py-20">
+            <div className="text-center mb-12">
+              <p className="eyebrow mb-4">— Why it&apos;s safe</p>
+              <h2 className="text-3xl sm:text-4xl font-bold" style={{ fontFamily: "var(--font-display)" }}>
+                Built to be safe and open.
+              </h2>
             </div>
+            <div className="grid md:grid-cols-3 gap-5 items-stretch">
+              <StepRow delay={0} decor="dashes" icon="↓" accent="var(--mint)" tag="No-loss" label="Safety"
+                title="Principal protected" body="You only ever risk the interest, never the money you put in." />
+              <StepRow delay={100} decor="waves" icon="↺" accent="var(--volt)" tag="Liquid" label="Freedom"
+                title="Withdraw anytime" body="Take your money out whenever you want, unless you chose to lock it." />
+              <StepRow delay={200} decor="dots" icon="✓" accent="var(--coral)" tag="On-chain" label="Trust"
+                title="Verifiable draws" body="Odds and winners are on-chain. Check the math, don't take our word." />
+            </div>
+           </div>
           </section>
 
           {/* CTA band */}

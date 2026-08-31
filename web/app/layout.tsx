@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { Space_Mono, Bricolage_Grotesque, Figtree } from "next/font/google";
+import { Space_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import { WalletProvider } from "@/components/WalletProvider";
 import { ToastProvider } from "@/components/Toast";
@@ -15,18 +16,18 @@ const spaceMono = Space_Mono({
   weight: ["400", "700"],
 });
 
-// Display face (headings) - characterful grotesque.
-const bricolage = Bricolage_Grotesque({
-  variable: "--font-bricolage",
-  subsets: ["latin"],
-  weight: ["600", "700", "800"],
+// Display face (headings) - Nexa Heavy.
+const nexaHeavy = localFont({
+  src: "./fonts/Nexa-Heavy.ttf",
+  variable: "--font-nexa-heavy",
+  display: "swap",
 });
 
-// Body face - clean, warm grotesque.
-const figtree = Figtree({
-  variable: "--font-figtree",
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
+// Body face - Nexa ExtraLight.
+const nexaLight = localFont({
+  src: "./fonts/Nexa-ExtraLight.ttf",
+  variable: "--font-nexa-light",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -43,7 +44,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${spaceMono.variable} ${bricolage.variable} ${figtree.variable} h-full antialiased`}
+      className={`${spaceMono.variable} ${nexaHeavy.variable} ${nexaLight.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <head>
