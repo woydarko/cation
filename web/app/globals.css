@@ -127,6 +127,18 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+/* Marker-pen highlight behind a word: lime swipe under the text baseline. */
+.mark-zap {
+  background: linear-gradient(
+    transparent 58%,
+    color-mix(in srgb, var(--zap) 85%, transparent) 58%
+  );
+  padding: 0 0.08em;
+  border-radius: 0.1em;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
 /* CTA band: violet gradient + soft brand glows + dot texture for depth. */
 .cta-band {
   background:

@@ -11,26 +11,47 @@ export default function Landing() {
       <main className="flex-1 relative z-10">
         {/* Hero (centered, tall) */}
         <section className="relative z-10 min-h-[86vh] max-w-3xl mx-auto w-full px-6 pt-10 pb-20 text-center flex flex-col items-center justify-center">
-          <h1
-            className="text-5xl sm:text-6xl md:text-7xl font-bold leading-[1.05] mb-5"
-            style={{ fontFamily: "var(--font-display)" }}
-          >
-            Save money.
-            <br />
-            Win the interest.
-            <br />
-            <span className="text-volt">Never lose a cent.</span>
-          </h1>
-          <p className="text-lg text-ink-60 max-w-lg mb-8">
-            Cation pools everyone&apos;s interest into a daily prize on Stellar.
-            Your deposit stays yours, always.
-          </p>
-          <div className="flex flex-wrap items-center justify-center gap-3">
-            <ConnectCta variant="primary">Start saving</ConnectCta>
-            <a href="/how-it-works" className="btn inline-flex px-6 py-4 text-lg bg-white border-2 border-ink-12 text-ink shadow-[var(--shadow-lift)] hover:border-volt hover:shadow-md transition-colors">
-              See how
-            </a>
-          </div>
+          <Reveal delay={0}>
+            <span className="inline-flex items-center gap-2 rounded-full border-[1.5px] border-ink-12 bg-white/70 backdrop-blur px-4 py-1.5 text-sm font-semibold text-ink-60 mb-6">
+              <span className="spark text-volt">✦</span>
+              No-loss savings · daily prize on Stellar
+            </span>
+          </Reveal>
+          <Reveal delay={90}>
+            <h1
+              className="text-5xl sm:text-6xl md:text-7xl font-extrabold tracking-[-0.03em] leading-[1.02] mb-5"
+              style={{ fontFamily: "var(--font-display)" }}
+            >
+              Save money.
+              <br />
+              Win the <span className="mark-zap">interest</span>.
+              <br />
+              <span className="text-volt">Never lose a cent.</span>
+            </h1>
+          </Reveal>
+          <Reveal delay={170}>
+            <p className="text-lg text-ink-60 max-w-lg mb-8">
+              Cation pools everyone&apos;s interest into a daily prize on Stellar.
+              Your deposit stays yours, always.
+            </p>
+          </Reveal>
+          <Reveal delay={250}>
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              <ConnectCta variant="primary">Start saving</ConnectCta>
+              <a href="/how-it-works" className="btn inline-flex px-6 py-4 text-lg bg-white border-2 border-ink-12 text-ink shadow-[var(--shadow-lift)] hover:border-volt hover:shadow-md transition-colors">
+                See how
+              </a>
+            </div>
+          </Reveal>
+          <Reveal delay={330}>
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-2 text-sm font-semibold text-ink-60">
+              {["Your deposit stays yours", "Withdraw anytime", "On-chain, verifiable"].map((c) => (
+                <span key={c} className="rounded-full bg-white border-[1.5px] border-ink-12 px-3 py-1">
+                  {c}
+                </span>
+              ))}
+            </div>
+          </Reveal>
         </section>
 
         {/* Smooth fade from the wave into the solid section below. */}
