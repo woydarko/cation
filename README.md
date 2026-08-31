@@ -273,6 +273,14 @@ The "work more on UI" feedback drove a frontend redesign:
 - **Housekeeping** — dropped the three.js wave background (and its deps) for
   a lighter CSS/asset hero.
 
+#### Screenshots
+
+![Landing hero](docs/screenshots/hero.png)
+
+![How it works](docs/screenshots/how-it-works.png)
+
+![Dashboard](docs/screenshots/dashboard.png)
+
 ## Testnet deployment
 
 The contract is live on Stellar testnet (Circle USDC, active Blend pool):
