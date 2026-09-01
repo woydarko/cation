@@ -204,6 +204,13 @@ export default function Dashboard() {
               desc="Your deposits, withdrawals, and wins — each verifiable on-chain."
               href="/app/activity"
             />
+            <ActionTile
+              icon="📊"
+              accent="var(--coral)"
+              title="Pool stats"
+              desc="Live TVL, prizes paid, and on-chain addresses to verify."
+              href="/app/pool"
+            />
           </div>
 
           {/* Recent draws */}
