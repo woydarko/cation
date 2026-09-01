@@ -175,11 +175,20 @@ Grab test USDC from https://faucet.circle.com/ .
 The web app is built with Next.js 16 (App Router), React 19, and Tailwind
 CSS 4. Key features:
 
-- **Landing page** with an interactive wave background (React Three Fiber)
+- **Landing page** with a violet hero and phone mockup
 - **Pool app** at `/app` showing pot, countdown, balance, odds, and
   deposit/withdraw forms
+- **Guided onboarding** — a first-run wizard that walks a new saver from
+  trustline to faucet to first deposit, one focused step at a time
+- **Your activity** at `/app/activity` — your personal deposits, withdrawals,
+  and wins, each row linking to the transaction on Stellar Expert
+- **Pool transparency** at `/app/pool` — live TVL, recent prizes, and the
+  PrizePool/Blend/USDC addresses, each verifiable on-chain
+- **Lock status** surfaced up front (via a read-only withdraw simulation) so a
+  locked position shows the early-exit terms before you try
+- **Odds explainer** tooltip breaking down the time-weighted ticket math
 - **Draw history** at `/app/history` reading on-chain events via RPC
-- **Win reveal** scratch-card animation when you win
+- **Win reveal** scratch-card animation with a one-tap "share my win"
 - **Notification bell** polling for new draw results
 - **Mobile responsive** down to 375px width
 - **Loading skeletons** and toast notifications for better UX
@@ -280,6 +289,42 @@ The "work more on UI" feedback drove a frontend redesign:
 ![How it works](docs/screenshots/how-it-works.png)
 
 ![Dashboard](docs/screenshots/dashboard.png)
+
+## Level 5 — product iteration
+
+With the MVP live, this phase shifted from building to growing and improving.
+We collect tester feedback through the
+[feedback form](https://docs.google.com/forms/d/e/1FAIpQLSfGVy1i2Nh0uQni2akNtCSQ_gsmgT0oPM9xbidhPcg2ynTiIA/viewform)
+(wallet, name, email, a product rating, and free-text notes). As responses
+come in, the exported sheet is committed to `docs/feedback.xlsx` and linked
+here for analysis and record-keeping.
+
+Each improvement below closes a specific gap testers hit, and every one is
+frontend-only — the live contract and everyone's existing deposits were never
+redeployed. This was possible because the contract already emits `deposit`,
+`withdraw`, `earlyexit`, `draw`, and `claim` events keyed by user, so the new
+views read straight from chain via RPC.
+
+| Feedback theme | What we shipped | Commit |
+| --- | --- | --- |
+| "I can't tell what my wallet actually did on-chain." | **Activity page** (`/app/activity`) — your deposits, withdrawals, and wins, each row linking to the transaction on Stellar Expert. Doubles as verifiable proof-of-activity. | [`115b11c`](https://github.com/woydarko/cation/commit/115b11c) |
+| "Getting test USDC and making a first deposit was confusing." | **Guided onboarding wizard** — collapses trustline, faucet, and deposit into one focused flow that always shows the single next step. | [`1464239`](https://github.com/woydarko/cation/commit/1464239) |
+| "The withdraw error felt broken — I didn't know I was locked." | **Lock status up front** — a read-only withdraw simulation detects a locked position (past the RPC event window) and shows the early-exit terms before you try. | [`aca2efb`](https://github.com/woydarko/cation/commit/aca2efb) |
+| "Is this legit? Where does the money actually sit?" | **Pool transparency page** (`/app/pool`) — live TVL, recent prizes, and the PrizePool/Blend/USDC addresses, each linking to Stellar Expert. | [`d08bd35`](https://github.com/woydarko/cation/commit/d08bd35) |
+| "How are my odds calculated?" | **Odds explainer tooltip** — breaks down tickets = deposit × ledgers held, accessible on hover, focus, and tap. | [`2afb81b`](https://github.com/woydarko/cation/commit/2afb81b) |
+| "Let me flex when I win." | **Share my win** — the win reveal gets a native share sheet (X fallback); the user confirms the post, nothing is sent automatically. | [`25d650a`](https://github.com/woydarko/cation/commit/25d650a) |
+
+### Next phase (from here)
+
+- **Precise lock countdown.** Today the UI proves *whether* a position is
+  locked; showing *when* it unlocks needs a `deposit_of` view, which we've
+  deferred so the live pool isn't redeployed. It lands with the on-chain work
+  in Roadmap Phase 1.
+- **All-time stats.** The activity feed and "recent prizes" are bounded by the
+  RPC event window (~12h). An indexer will back full lifetime history and a
+  true all-time payout total.
+- **Deeper transparency.** A public dashboard of total value saved, yield
+  generated, and prizes paid (Roadmap Phase 2), seeded by the same reads.
 
 ## Testnet deployment
 
