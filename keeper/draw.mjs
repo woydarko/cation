@@ -66,10 +66,30 @@ async function withRetry(label, fn, tries = 4) {
   throw last;
 }
 
+// Pay out an outstanding prize, but only when one actually exists. claim_prize
+// returns the winner when there is a prize to pay and the contract's own
+// address when there is nothing pending, so we simulate first and submit a tx
+// only in the former case. This keeps empty-pot draws from failing, avoids a
+// no-op tx every run, and self-heals a prize a previous run left unpaid (an
+// unclaimed prize blocks the next draw, so sweeping it also unblocks draws).
+async function sweepPrize(label) {
+  const tx = await withRetry(`${label} (simulate)`, async () => client.claim_prize());
+  const winner = tx.result;
+  if (!winner || winner === POOL_ID) {
+    return null; // nothing pending
+  }
+  console.log(`${label}: paying out to ${winner}…`);
+  await withRetry(`${label} (send)`, async () => tx.signAndSend());
+  return winner;
+}
+
 async function main() {
   const cfg = (await client.get_config()).result;
   const now = await ledger();
   console.log(`epoch=${cfg.epoch} next_draw_ledger=${cfg.next_draw_ledger} current=${now}`);
+
+  // Clear any prize a prior run couldn't finish before doing anything else.
+  await sweepPrize("sweep");
 
   if (now < Number(cfg.next_draw_ledger)) {
     console.log(`draw not due (${Number(cfg.next_draw_ledger) - now} ledgers to go)`);
@@ -94,14 +114,14 @@ async function main() {
   );
   const winner = revealed.result;
 
-  console.log("claiming prize…");
-  const claimed = await withRetry("claim", async () =>
-    (await client.claim_prize()).signAndSend()
-  );
+  // Pay the fresh prize. An empty-pot draw records no prize, so this is a no-op
+  // (no tx) and the run still succeeds.
+  const paid = await sweepPrize("claim");
 
   const pot = (await client.pot()).result;
   console.log(
-    `draw done. winner=${winner} paid=${claimed.result}. epoch is now ${cfg.epoch + 1}. pot now ${pot}.`
+    `draw done. winner=${winner} ${paid ? `paid=${paid}` : "(empty pot, no payout)"}. ` +
+      `epoch is now ${cfg.epoch + 1}. pot now ${pot}.`
   );
 }
 
