@@ -121,12 +121,42 @@ export default function WinRevealModal({
           )}
         </div>
 
-        <button onClick={onClose} className="btn btn-primary w-full py-3">
-          {revealed ? "Collect" : "Skip"}
-        </button>
+        {revealed ? (
+          <div className="flex flex-col gap-3">
+            <button onClick={() => shareWin(amount)} className="btn btn-primary w-full py-3">
+              Share my win
+            </button>
+            <button onClick={onClose} className="btn w-full py-3 border-2 border-ink-12 text-ink-60 font-semibold hover:border-volt hover:text-volt transition-colors">
+              Collect
+            </button>
+          </div>
+        ) : (
+          <button onClick={onClose} className="btn btn-primary w-full py-3">
+            Skip
+          </button>
+        )}
       </div>
     </div>
   );
+}
+
+/** Let the winner brag. Uses the native share sheet where available (mobile),
+ * falling back to an X compose window. Either way the user confirms the post
+ * themselves — nothing is sent automatically. */
+async function shareWin(amount: string) {
+  const url =
+    typeof window !== "undefined" ? window.location.origin : "https://cation-henna.vercel.app";
+  const text = `I just won $${formatUsdc(amount, 7)} in the Cation daily no-loss prize draw 🎉 My savings never left my wallet. Save & win:`;
+  if (typeof navigator !== "undefined" && navigator.share) {
+    try {
+      await navigator.share({ title: "I won on Cation", text, url });
+      return;
+    } catch {
+      // user dismissed the sheet, or share unavailable — fall through
+    }
+  }
+  const intent = `https://twitter.com/intent/tweet?text=${encodeURIComponent(`${text} ${url}`)}`;
+  window.open(intent, "_blank", "noopener,noreferrer");
 }
 
 function Confetti() {
