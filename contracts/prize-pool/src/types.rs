@@ -5,12 +5,12 @@ use soroban_sdk::{contracterror, contracttype, Address, BytesN};
 #[derive(Clone)]
 pub struct Config {
     pub admin: Address,
-    pub usdc_sac: Address,     // USDC Stellar Asset Contract
-    pub blend_pool: Address,   // Blend pool the USDC is supplied to
-    pub draw_interval: u32,    // ledgers between draws
-    pub next_draw_ledger: u32, // ledger when next draw becomes eligible
-    pub penalty_bps: u32,      // early-exit penalty, basis points (500 = 5%)
-    pub epoch: u32,            // current draw epoch
+    pub usdc_sac: Address,   // USDC Stellar Asset Contract
+    pub blend_pool: Address, // Blend pool the USDC is supplied to
+    pub draw_period: u64,    // seconds between draws (86400 = daily)
+    pub next_draw_ts: u64,   // unix seconds; draw eligible when ledger time >= this
+    pub penalty_bps: u32,    // early-exit penalty, basis points (500 = 5%)
+    pub epoch: u32,          // current draw epoch
 }
 
 /// Per-user savings position.

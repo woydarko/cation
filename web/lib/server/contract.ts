@@ -1,5 +1,5 @@
 import "server-only";
-import { Client, networks } from "prize-pool-client";
+import { Client } from "prize-pool-client";
 import { Client as UsdcClient } from "usdc-client";
 import { rpc } from "@stellar/stellar-sdk";
 import { RPC_URL, NETWORK_PASSPHRASE, PRIZE_POOL_ID, USDC_SAC } from "../config";
@@ -7,7 +7,7 @@ import { RPC_URL, NETWORK_PASSPHRASE, PRIZE_POOL_ID, USDC_SAC } from "../config"
 function client(): Client {
   return new Client({
     contractId: PRIZE_POOL_ID,
-    networkPassphrase: networks.testnet.networkPassphrase ?? NETWORK_PASSPHRASE,
+    networkPassphrase: NETWORK_PASSPHRASE,
     rpcUrl: RPC_URL,
   });
 }
@@ -20,7 +20,7 @@ export type PoolState = {
   totalTickets: string;
   epoch: number;
   penaltyBps: number;
-  nextDrawLedger: number;
+  nextDrawTs: number; // unix seconds of the next draw (00:00 UTC daily)
   currentLedger: number;
   serverTime: number; // ms epoch, for a clock-synced countdown
   user?: { balance: string; tickets: string; usdcBalance: string };
@@ -44,7 +44,7 @@ export async function readPoolState(user?: string): Promise<PoolState> {
     totalTickets: s(tickets),
     epoch: Number(cfg.epoch),
     penaltyBps: Number(cfg.penalty_bps),
-    nextDrawLedger: Number(cfg.next_draw_ledger),
+    nextDrawTs: Number(cfg.next_draw_ts),
     currentLedger: latest.sequence,
     serverTime: Date.now(),
   };

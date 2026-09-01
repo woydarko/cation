@@ -18,7 +18,7 @@ stellar contract invoke \
   --admin "$ADMIN_ADDR" \
   --usdc_sac "$USDC_SAC" \
   --blend_pool "$BLEND_POOL" \
-  --draw_interval "$DRAW_INTERVAL_LEDGERS" \
+  --draw_period "$DRAW_PERIOD_SECONDS" \
   --penalty_bps "$PENALTY_BPS"
 
 echo "done. admin=$ADMIN_ADDR"

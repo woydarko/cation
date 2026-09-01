@@ -85,14 +85,17 @@ async function sweepPrize(label) {
 
 async function main() {
   const cfg = (await client.get_config()).result;
-  const now = await ledger();
-  console.log(`epoch=${cfg.epoch} next_draw_ledger=${cfg.next_draw_ledger} current=${now}`);
+  // The contract gates the draw on ledger close time, which tracks wall clock,
+  // so compare against the current unix time. next_draw_ts is a UTC-midnight
+  // boundary, making the draw fire daily at 00:00 UTC.
+  const nowTs = Math.floor(Date.now() / 1000);
+  console.log(`epoch=${cfg.epoch} next_draw_ts=${cfg.next_draw_ts} now=${nowTs}`);
 
   // Clear any prize a prior run couldn't finish before doing anything else.
   await sweepPrize("sweep");
 
-  if (now < Number(cfg.next_draw_ledger)) {
-    console.log(`draw not due (${Number(cfg.next_draw_ledger) - now} ledgers to go)`);
+  if (nowTs < Number(cfg.next_draw_ts)) {
+    console.log(`draw not due (${Number(cfg.next_draw_ts) - nowTs}s to go)`);
     return;
   }
 

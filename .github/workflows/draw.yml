@@ -1,13 +1,16 @@
 name: cation-draw
 
-# Runs the Cation draw keeper on a schedule. The draw window is ledger-based
-# (next_draw_ledger = last draw + draw_interval), so it drifts against wall-clock
-# time and does not line up with a fixed hour. The keeper no-ops until the window
-# is open, so we run every 2 hours and it fires the draw within a couple of hours
-# of each ~daily window opening.
+# Runs the Cation draw keeper. The contract gates the draw on ledger close time
+# at the next 00:00 UTC boundary, so the draw fires daily at midnight UTC. The
+# keeper no-ops until then. GitHub's scheduled runs are often delayed by minutes
+# and occasionally skipped, so we fire a few times in the first UTC hours; the
+# first run at/after 00:00 draws and the rest no-op.
 on:
   schedule:
-    - cron: "0 */2 * * *" # every 2 hours
+    - cron: "0 0 * * *" # 00:00 UTC (the draw)
+    - cron: "20 0 * * *" # retry if the 00:00 run was delayed/skipped
+    - cron: "0 1 * * *" # retry
+    - cron: "0 3 * * *" # last-resort catch-up
   workflow_dispatch: {} # allow manual runs
 
 jobs:

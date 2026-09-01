@@ -4,12 +4,6 @@ import type { u32, u64, i128 } from "@stellar/stellar-sdk/contract";
 export * from "@stellar/stellar-sdk";
 export * as contract from "@stellar/stellar-sdk/contract";
 export * as rpc from "@stellar/stellar-sdk/rpc";
-export declare const networks: {
-    readonly testnet: {
-        readonly networkPassphrase: "Test SDF Network ; September 2015";
-        readonly contractId: "CA2R26QQEXNMQ6CXFINDKPKTEDUWV6E3OWSHPMEO62PSNOYR2QZ4QILW";
-    };
-};
 export declare const Errors: {
     1: {
         message: string;
@@ -67,9 +61,9 @@ export interface Prize {
 export interface Config {
     admin: string;
     blend_pool: string;
-    draw_interval: u32;
+    draw_period: u64;
     epoch: u32;
-    next_draw_ledger: u32;
+    next_draw_ts: u64;
     penalty_bps: u32;
     usdc_sac: string;
 }
@@ -157,11 +151,11 @@ export interface Client {
      * Construct and simulate a initialize transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
      * One-time setup. `penalty_bps` = early-exit penalty (e.g. 500 = 5%).
      */
-    initialize: ({ admin, usdc_sac, blend_pool, draw_interval, penalty_bps }: {
+    initialize: ({ admin, usdc_sac, blend_pool, draw_period, penalty_bps }: {
         admin: string;
         usdc_sac: string;
         blend_pool: string;
-        draw_interval: u32;
+        draw_period: u64;
         penalty_bps: u32;
     }, options?: MethodOptions) => Promise<AssembledTransaction<null>>;
     /**

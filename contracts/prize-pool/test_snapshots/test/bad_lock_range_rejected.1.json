@@ -44,7 +44,7 @@
                   "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M"
                 },
                 {
-                  "u32": 10
+                  "u64": "10"
                 },
                 {
                   "u32": 0
@@ -242,10 +242,10 @@
                           },
                           {
                             "key": {
-                              "symbol": "draw_interval"
+                              "symbol": "draw_period"
                             },
                             "val": {
-                              "u32": 10
+                              "u64": "10"
                             }
                           },
                           {
@@ -258,10 +258,10 @@
                           },
                           {
                             "key": {
-                              "symbol": "next_draw_ledger"
+                              "symbol": "next_draw_ts"
                             },
                             "val": {
-                              "u32": 10
+                              "u64": "10"
                             }
                           },
                           {

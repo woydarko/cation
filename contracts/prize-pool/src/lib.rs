@@ -47,20 +47,25 @@ impl PrizePool {
         admin: Address,
         usdc_sac: Address,
         blend_pool: Address,
-        draw_interval: u32,
+        draw_period: u64,
         penalty_bps: u32,
     ) {
         if env.storage().instance().has(&DataKey::Config) {
             panic_with_error!(&env, Error::AlreadyInitialized);
         }
+        if draw_period == 0 {
+            panic_with_error!(&env, Error::ZeroAmount);
+        }
         admin.require_auth();
-        let next_draw_ledger = env.ledger().sequence() + draw_interval;
+        // Anchor the first draw to the next period boundary. With draw_period =
+        // 86400 that is the next 00:00 UTC, so draws land daily at midnight.
+        let next_draw_ts = Self::next_boundary(env.ledger().timestamp(), draw_period);
         let cfg = Config {
             admin,
             usdc_sac,
             blend_pool,
-            draw_interval,
-            next_draw_ledger,
+            draw_period,
+            next_draw_ts,
             penalty_bps,
             epoch: 0,
         };
@@ -274,7 +279,7 @@ impl PrizePool {
     pub fn reveal_draw(env: Env, seed: BytesN<32>) -> Address {
         let mut cfg = Self::config(&env);
         cfg.admin.require_auth();
-        if env.ledger().sequence() < cfg.next_draw_ledger {
+        if env.ledger().timestamp() < cfg.next_draw_ts {
             panic_with_error!(&env, Error::DrawNotReady);
         }
         // A prior prize must be paid out before drawing again, or its redeemed
@@ -318,7 +323,9 @@ impl PrizePool {
         }
 
         cfg.epoch += 1;
-        cfg.next_draw_ledger = env.ledger().sequence() + cfg.draw_interval;
+        // Re-anchor to the next period boundary *after* now, not now + period, so
+        // a late or missed draw never drifts the schedule off 00:00 UTC.
+        cfg.next_draw_ts = Self::next_boundary(env.ledger().timestamp(), cfg.draw_period);
         env.storage().instance().set(&DataKey::Config, &cfg);
         env.storage().instance().remove(&DataKey::PendingCommit);
 
@@ -351,6 +358,12 @@ impl PrizePool {
     }
 
     // ---- internal helpers -----------------------------------------------
+
+    /// The first period boundary strictly after `now`. For period = 86400 this
+    /// is the next 00:00 UTC, which keeps draws pinned to midnight with no drift.
+    fn next_boundary(now: u64, period: u64) -> u64 {
+        (now / period + 1) * period
+    }
 
     fn pick_winner(env: &Env, seed: &BytesN<32>) -> Address {
         let savers = Self::savers(env);

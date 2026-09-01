@@ -13,7 +13,7 @@ struct Setup {
     admin: Address,
 }
 
-fn setup(penalty_bps: u32, draw_interval: u32) -> Setup {
+fn setup(penalty_bps: u32, draw_period: u64) -> Setup {
     let env = Env::default();
     env.mock_all_auths();
     let admin = Address::generate(&env);
@@ -24,13 +24,7 @@ fn setup(penalty_bps: u32, draw_interval: u32) -> Setup {
 
     let pool_addr = env.register(PrizePool, ());
     let pool = PrizePoolClient::new(&env, &pool_addr);
-    pool.initialize(
-        &admin,
-        &usdc_addr,
-        &blend_pool,
-        &draw_interval,
-        &penalty_bps,
-    );
+    pool.initialize(&admin, &usdc_addr, &blend_pool, &draw_period, &penalty_bps);
 
     Setup {
         env,
@@ -89,8 +83,11 @@ fn draw_pays_only_yield_principal_intact() {
     accrue_yield(&s, 40); // pot = 40
     assert_eq!(s.pool.pot(), 40);
 
-    // advance past the draw window and hold time for tickets
-    s.env.ledger().with_mut(|l| l.sequence_number += 20);
+    // advance past the draw window (timestamp) and hold time for tickets (ledgers)
+    s.env.ledger().with_mut(|l| {
+        l.sequence_number += 20;
+        l.timestamp += 20;
+    });
 
     let seed = BytesN::from_array(&s.env, &[7u8; 32]);
     let seed_hash = s
@@ -119,7 +116,10 @@ fn cannot_draw_again_with_unclaimed_prize() {
     let a = Address::generate(&s.env);
     deposit(&s, &a, 100, 0);
     accrue_yield(&s, 40);
-    s.env.ledger().with_mut(|l| l.sequence_number += 20);
+    s.env.ledger().with_mut(|l| {
+        l.sequence_number += 20;
+        l.timestamp += 20;
+    });
 
     let seed = BytesN::from_array(&s.env, &[7u8; 32]);
     let seed_hash = s
@@ -131,7 +131,10 @@ fn cannot_draw_again_with_unclaimed_prize() {
     s.pool.reveal_draw(&seed);
 
     // a second draw before claiming the first prize is rejected
-    s.env.ledger().with_mut(|l| l.sequence_number += 20);
+    s.env.ledger().with_mut(|l| {
+        l.sequence_number += 20;
+        l.timestamp += 20;
+    });
     s.pool.commit_draw(&seed_hash);
     assert!(s.pool.try_reveal_draw(&seed).is_err());
 
@@ -178,6 +181,45 @@ fn bad_lock_range_rejected() {
     let too_short = s.env.ledger().sequence() as u64 + 17_280;
     let r = s.pool.try_deposit(&u, &100, &too_short);
     assert!(r.is_err());
+}
+
+#[test]
+fn draw_reanchors_to_next_boundary_no_drift() {
+    let s = setup(0, 100); // 100s period stands in for the 86400s day
+    let a = Address::generate(&s.env);
+    deposit(&s, &a, 100, 0);
+    accrue_yield(&s, 10);
+
+    // Draw fires mid-period (t=250), later than the 100s boundary it was due at.
+    s.env.ledger().with_mut(|l| {
+        l.sequence_number += 20;
+        l.timestamp = 250;
+    });
+    let seed = BytesN::from_array(&s.env, &[7u8; 32]);
+    let seed_hash = s
+        .env
+        .crypto()
+        .sha256(&Bytes::from_array(&s.env, &[7u8; 32]))
+        .to_bytes();
+    s.pool.commit_draw(&seed_hash);
+    s.pool.reveal_draw(&seed);
+    s.pool.claim_prize();
+
+    // Next draw is pinned to the boundary after now (300), not now + period (350):
+    // a late draw does not push the schedule off its grid.
+    assert_eq!(s.pool.get_config().next_draw_ts, 300);
+
+    // Not eligible just before the boundary…
+    s.env.ledger().with_mut(|l| {
+        l.sequence_number += 20;
+        l.timestamp = 299;
+    });
+    s.pool.commit_draw(&seed_hash);
+    assert!(s.pool.try_reveal_draw(&seed).is_err());
+
+    // …eligible exactly at it.
+    s.env.ledger().with_mut(|l| l.timestamp = 300);
+    assert!(s.pool.try_reveal_draw(&seed).is_ok());
 }
 
 #[test]
