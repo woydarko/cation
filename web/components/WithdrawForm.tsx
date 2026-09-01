@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AmountInput } from "./Sheet";
 import { useWallet } from "./WalletProvider";
 import { useToast } from "./Toast";
@@ -15,12 +15,28 @@ export default function WithdrawForm({
   balance: string;
   onDone: () => void;
 }) {
-  const { withdraw } = useWallet();
+  const { address, withdraw } = useWallet();
   const toast = useToast();
   const [amount, setAmount] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [locked, setLocked] = useState(false);
+
+  // Preflight: detect a locked position up front (read-only simulation) so we
+  // show the early-exit panel before the user tries a strict withdraw.
+  useEffect(() => {
+    if (!address || toUsdc(balance) <= 0) return;
+    let live = true;
+    fetch(`/api/lock?user=${address}`, { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (live && d?.locked) setLocked(true);
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [address, balance]);
 
   const max = toUsdc(balance);
   const n = Number(amount) || 0;

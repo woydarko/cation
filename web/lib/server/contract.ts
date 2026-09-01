@@ -64,3 +64,28 @@ export async function readPoolState(user?: string): Promise<PoolState> {
   }
   return state;
 }
+
+/**
+ * Whether the user's position is currently locked, detected by simulating a
+ * full-balance strict withdraw (read-only, no signing). A locked position makes
+ * the contract reject with StillLocked (#6) during simulation — unlike reading
+ * the deposit event, this has no RPC ledger-window limit, so day-old locks are
+ * still detected.
+ *
+ * ponytail: simulation tells us locked-or-not but not the unlock ledger. A
+ * precise "unlocks in N days" needs a deposit_of view, deferred so we don't
+ * redeploy (and reset) the live testnet pool.
+ */
+export async function readLockStatus(user: string): Promise<boolean> {
+  const c = client();
+  const bal = await c.balance_of({ user }).then((t) => t.result);
+  if (bal <= 0n) return false;
+  try {
+    await c.withdraw({ to: user, amount: bal, force_early: false });
+    return false; // a strict withdraw simulates cleanly -> not locked
+  } catch (e) {
+    const msg = String(e);
+    // Only assert a lock we can actually prove; swallow unrelated sim errors.
+    return msg.includes("#6") || /lock/i.test(msg);
+  }
+}

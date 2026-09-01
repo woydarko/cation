@@ -21,6 +21,7 @@ export default function Dashboard() {
   const [draws, setDraws] = useState<Draw[]>([]);
   const [win, setWin] = useState<{ amount: string; epoch: number } | null>(null);
   const [fauceting, setFauceting] = useState(false);
+  const [locked, setLocked] = useState(false);
 
   const checkDraws = useCallback(async () => {
     const r = await fetch("/api/history", { cache: "no-store" });
@@ -48,6 +49,16 @@ export default function Dashboard() {
     const id = setInterval(refresh, 12000);
     return () => clearInterval(id);
   }, [address, refresh]);
+
+  // Lock status is a slow, rarely-changing read (a withdraw simulation), so
+  // fetch it once per wallet rather than on the 12s state poll.
+  useEffect(() => {
+    if (!address) return;
+    fetch(`/api/lock?user=${address}`, { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => setLocked(!!d?.locked))
+      .catch(() => {});
+  }, [address]);
 
   const claim = async () => {
     setFauceting(true);
@@ -239,7 +250,8 @@ export default function Dashboard() {
         <div className="flex flex-col gap-6">
           {/* Stats */}
           <div className="grid grid-cols-2 gap-4">
-            <StatTile wide label="Your balance" value={`$${formatUsdc(bal)}`} loading={!state} />
+            <StatTile wide label="Your balance" value={`$${formatUsdc(bal)}`} loading={!state}
+              note={locked ? "🔒 Locked · early exit costs 5%" : undefined} />
             <StatTile wide label="Wallet USDC" value={`$${formatUsdc(usdc)}`} loading={!state} />
             <StatTile label="Your odds" value={hasDeposit ? `${odds}%` : "0%"} accent loading={!state} />
             <StatTile label="Times won" value={String(wins)} loading={!state} />
@@ -355,12 +367,14 @@ function StatTile({
   accent,
   loading,
   wide,
+  note,
 }: {
   label: string;
   value: string;
   accent?: boolean;
   loading?: boolean;
   wide?: boolean;
+  note?: string;
 }) {
   return (
     <div className={`card card-hover p-5 min-w-0 ${wide ? "col-span-2" : ""}`}>
@@ -375,6 +389,9 @@ function StatTile({
         >
           <CountUp value={value} />
         </p>
+      )}
+      {note && !loading && (
+        <p className="text-ink-60 text-xs mt-2 font-semibold">{note}</p>
       )}
     </div>
   );
