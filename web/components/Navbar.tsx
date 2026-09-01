@@ -55,6 +55,9 @@ export default function Navbar() {
               <Link href="/app" className="text-ink-60 hover:text-ink font-medium text-sm">
                 Dashboard
               </Link>
+              <Link href="/app/activity" className="hidden sm:block text-ink-60 hover:text-ink font-medium text-sm">
+                Activity
+              </Link>
               <NotificationBell address={address} />
               <div className="relative" ref={ref}>
                 <button

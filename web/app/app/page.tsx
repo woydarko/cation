@@ -192,6 +192,13 @@ export default function Dashboard() {
               desc="See every past winner and payout on-chain."
               href="/app/history"
             />
+            <ActionTile
+              icon="📜"
+              accent="var(--mint)"
+              title="Your activity"
+              desc="Your deposits, withdrawals, and wins — each verifiable on-chain."
+              href="/app/activity"
+            />
           </div>
 
           {/* Recent draws */}
