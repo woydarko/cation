@@ -4,6 +4,7 @@ import Link from "next/link";
 import PotCounter from "@/components/PotCounter";
 import Countdown from "@/components/Countdown";
 import WinRevealModal from "@/components/WinRevealModal";
+import OnboardWizard from "@/components/OnboardWizard";
 import Skeleton from "@/components/Skeleton";
 import { useWallet } from "@/components/WalletProvider";
 import { useToast } from "@/components/Toast";
@@ -88,9 +89,7 @@ export default function Dashboard() {
   const usdc = state?.user?.usdcBalance ?? "0";
   const odds = state?.user ? oddsPct(state.user.tickets, state.totalTickets) : "0";
   const hasDeposit = BigInt(bal) > 0n;
-  const hasUsdc = BigInt(usdc) > 0n;
   const wins = draws.filter((d) => d.winner === address).length;
-  const short = `${address.slice(0, 4)}…${address.slice(-4)}`;
 
   return (
     <main className="flex-1 max-w-6xl mx-auto w-full px-6 py-8">
@@ -145,21 +144,16 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Setup steps */}
-          <div className="card p-6 sm:p-8">
-            <h2 className="font-bold text-lg mb-6" style={{ fontFamily: "var(--font-display)" }}>
-              Get set up
-            </h2>
-            <ol className="flex flex-col sm:flex-row sm:items-start gap-4 sm:gap-2">
-              <SetupStep n={1} label="Connect wallet" done detail={short} />
-              <StepLine done={hasUsdc} />
-              <SetupStep n={2} label="Get USDC" done={hasUsdc} active={!hasUsdc}
-                detail={hasUsdc ? `$${formatUsdc(usdc)} ready` : "Grab testnet USDC"} />
-              <StepLine done={hasDeposit} />
-              <SetupStep n={3} label="Deposit & join" done={hasDeposit} active={hasUsdc && !hasDeposit}
-                detail={hasDeposit ? "You're in the draw" : "Add to the pool"} />
-            </ol>
-          </div>
+          {/* Onboarding — active until the first deposit lands */}
+          {!hasDeposit && (
+            <OnboardWizard
+              usdcBalance={usdc}
+              currentLedger={state?.currentLedger ?? 0}
+              onGetUsdc={claim}
+              busy={fauceting}
+              onDone={refresh}
+            />
+          )}
 
           {/* Quick actions */}
           <div className="grid sm:grid-cols-2 gap-4">
@@ -305,49 +299,6 @@ export default function Dashboard() {
 }
 
 /* ---------- pieces ---------- */
-
-function SetupStep({
-  n,
-  label,
-  detail,
-  done,
-  active,
-}: {
-  n: number;
-  label: string;
-  detail?: string;
-  done?: boolean;
-  active?: boolean;
-}) {
-  return (
-    <li className="flex sm:flex-col items-center sm:text-center gap-3 sm:gap-2 flex-1">
-      <span
-        className={`shrink-0 w-10 h-10 rounded-full grid place-items-center font-bold tabular transition-colors ${
-          done
-            ? "bg-mint text-ink"
-            : active
-            ? "bg-volt text-white"
-            : "bg-cloud text-ink-60 border-2 border-ink-12"
-        }`}
-      >
-        {done ? "✓" : n}
-      </span>
-      <div className="sm:mt-1">
-        <p className={`font-semibold ${active ? "text-volt" : done ? "text-ink" : "text-ink-60"}`}>{label}</p>
-        {detail && <p className="text-ink-60 text-xs mt-0.5">{detail}</p>}
-      </div>
-    </li>
-  );
-}
-
-function StepLine({ done }: { done?: boolean }) {
-  return (
-    <span
-      className={`hidden sm:block flex-1 h-0.5 mt-5 rounded ${done ? "bg-mint" : "bg-ink-12"}`}
-      aria-hidden
-    />
-  );
-}
 
 function ActionTile({
   icon,
