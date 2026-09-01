@@ -260,7 +260,8 @@ export default function Dashboard() {
             <StatTile wide label="Your balance" value={`$${formatUsdc(bal)}`} loading={!state}
               note={locked ? "🔒 Locked · early exit costs 5%" : undefined} />
             <StatTile wide label="Wallet USDC" value={`$${formatUsdc(usdc)}`} loading={!state} />
-            <StatTile label="Your odds" value={hasDeposit ? `${odds}%` : "0%"} accent loading={!state} />
+            <StatTile label="Your odds" value={hasDeposit ? `${odds}%` : "0%"} accent loading={!state}
+              info="Odds = your tickets ÷ everyone's tickets. Tickets = deposit × ledgers held, so both a bigger deposit and a longer hold raise your chances." />
             <StatTile label="Times won" value={String(wins)} loading={!state} />
           </div>
 
@@ -319,6 +320,28 @@ export default function Dashboard() {
 
 /* ---------- pieces ---------- */
 
+/** Small "?" affordance with a tooltip on hover and keyboard focus (so it also
+ * opens on a mobile tap, since tapping focuses the button). */
+function InfoDot({ text, label }: { text: string; label: string }) {
+  return (
+    <span className="relative inline-flex group shrink-0">
+      <button
+        type="button"
+        aria-label={label}
+        className="w-4 h-4 rounded-full bg-ink-12 text-ink-60 text-[10px] font-bold grid place-items-center hover:bg-volt hover:text-white focus-visible:bg-volt focus-visible:text-white transition-colors"
+      >
+        ?
+      </button>
+      <span
+        role="tooltip"
+        className="pointer-events-none absolute left-1/2 bottom-full mb-2 -translate-x-1/2 w-56 rounded-xl bg-ink text-white text-xs font-medium leading-snug p-3 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity z-50 shadow-lg"
+      >
+        {text}
+      </span>
+    </span>
+  );
+}
+
 function ActionTile({
   icon,
   accent,
@@ -375,6 +398,7 @@ function StatTile({
   loading,
   wide,
   note,
+  info,
 }: {
   label: string;
   value: string;
@@ -382,10 +406,14 @@ function StatTile({
   loading?: boolean;
   wide?: boolean;
   note?: string;
+  info?: string;
 }) {
   return (
     <div className={`card card-hover p-5 min-w-0 ${wide ? "col-span-2" : ""}`}>
-      <p className="text-ink-60 text-sm mb-2 truncate">{label}</p>
+      <p className="text-ink-60 text-sm mb-2 truncate flex items-center gap-1.5">
+        <span className="truncate">{label}</span>
+        {info && <InfoDot text={info} label={`How ${label} works`} />}
+      </p>
       {loading ? (
         <Skeleton className="h-8 w-20" />
       ) : (
