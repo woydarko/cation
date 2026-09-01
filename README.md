@@ -314,6 +314,19 @@ views read straight from chain via RPC.
 | "How are my odds calculated?" | **Odds explainer tooltip** — breaks down tickets = deposit × ledgers held, accessible on hover, focus, and tap. | [`2afb81b`](https://github.com/woydarko/cation/commit/2afb81b) |
 | "Let me flex when I win." | **Share my win** — the win reveal gets a native share sheet (X fallback); the user confirms the post, nothing is sent automatically. | [`25d650a`](https://github.com/woydarko/cation/commit/25d650a) |
 
+### Reliability fixes
+
+Auditing the daily draws surfaced two operational issues, now fixed:
+
+- **Draws now fire at exactly 00:00 UTC, with no drift.** The gate was a ledger
+  count re-anchored off each (late) draw, so the window slid hours later every
+  day and once skipped a day. The contract now gates on ledger close time and
+  re-anchors to the next UTC-midnight boundary. [`3fa61f7`](https://github.com/woydarko/cation/commit/3fa61f7)
+- **Empty-pot draws no longer fail the keeper.** `claim_prize` is a no-op when
+  nothing is pending, so the keeper simulates it and only sends a payout tx when
+  one is actually due — and sweeps a prize a prior run left unpaid at the start
+  of each run, which also unblocks the next draw. [`cab3d71`](https://github.com/woydarko/cation/commit/cab3d71)
+
 ### Next phase (from here)
 
 - **Precise lock countdown.** Today the UI proves *whether* a position is
@@ -333,7 +346,9 @@ The contract is live on Stellar testnet (Circle USDC, active Blend pool):
 - **PrizePool:** `CA2R26QQEXNMQ6CXFINDKPKTEDUWV6E3OWSHPMEO62PSNOYR2QZ4QILW`
 - **USDC:** `CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA` (Circle `USDC:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5`)
 - **Blend pool (CationCircle, status active):** `CDCCWAQCFXSJOWTYQRI4NPBVGC3NQDR3626MLOEAWLHXUECCASSW5ZPX`
-- **Draw interval:** 17,280 ledgers (~1 day), drawn at 00:00 UTC
+- **Draw schedule:** daily at 00:00 UTC (`draw_period` 86,400s; the contract
+  gates on ledger close time and re-anchors to the next midnight, so it never
+  drifts)
 - **Early exit penalty:** 500 bps (5%)
 
 Config lives in `config/testnet.env`. Deploy scripts are in
@@ -390,8 +405,9 @@ npm install
 POOL_ID=<contract-address> KEEPER_SECRET=<admin-secret> npm run draw
 ```
 
-The keeper checks if the draw window is open and runs the commit-reveal
-flow if it is. Otherwise it prints how many ledgers remain and exits.
+The keeper checks whether the draw is due (now ≥ `next_draw_ts`) and runs the
+commit-reveal flow if so. Otherwise it prints how many seconds remain and exits.
+It also sweeps any unpaid prize at the start of each run.
 
 ## Security invariants
 
